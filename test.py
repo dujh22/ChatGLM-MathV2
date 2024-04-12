@@ -1,27 +1,30 @@
-import re
+import sympy as sp
 
-def process_solution(solution):
-    # 通过正则表达式匹配句号，但要排除小数点和引号内的句号
-    pattern = r"(?<!\d)\.(?!\d)|(?<!['\"])\.(?=['\"])"
-    # 将句号分割成列表
-    segments = re.split(pattern, solution)
-    # 进一步处理引号内的句号，确保它们保持在同一行
-    cleaned_segments = []
-    quote_open = False
-    for segment in segments:
-        if "'" in segment or '"' in segment:
-            if not quote_open:
-                cleaned_segments.append(segment)
-                quote_open = True
-            else:
-                cleaned_segments[-1] += segment
-                quote_open = False
-        else:
-            cleaned_segments.extend(segment.split('\n'))
-    # 构建结果字典
-    result = {str(index): line for index, line in enumerate(cleaned_segments)}
-    return result
+def evaluate_expression(expr):
+    try:
+        # 将表达式中的变量正确处理，如将'3m'解析为3*m
+        expr = expr.replace('Sandy\'s_age', 'Sandy_age')  # 替换为有效的变量名
+        expr = expr.replace('3m', '3*m')  # 替换为 3*m
+        expr = expr.replace('3B', '3*B')  # 替换为 3*B
+        # 处理隐式乘法，如'3(10)'应该为'3*10'
+        expr = expr.replace(')', ')*').replace(')*)', ')')  # 替换所有括号后的数字以添加乘号
 
-# 测试
-solution = "This is a test sentence. It has a decimal point, like 3.14. But this one is in quotes: 'This is a test sentence with a period.'. And this one is in double quotes: \"Another test sentence with a period.\""
-print(process_solution(solution))
+        # 使用 sympy 解析和计算表达式
+        expr = sp.sympify(expr)
+        return expr, expr.evalf()
+    except Exception as e:
+        return None, str(e)
+
+# 测试一些表达式
+expressions = [
+    "10*Sandy's_age",
+    "27-3B/2",
+    "10+3(10)",
+    "16+3(16)+7",
+    "12+2(3)",
+    "3m+5"
+]
+
+for expr in expressions:
+    result, message = evaluate_expression(expr)
+    print(f"处理表达式 '{expr}' 的结果是：{result}, 错误信息：{message}")

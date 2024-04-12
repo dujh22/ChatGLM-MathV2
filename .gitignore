@@ -1,0 +1,9 @@
+# 忽略配置文件
+config.py
+
+# 忽略文件夹
+raw_data/
+data/
+
+# 忽略文件
+
