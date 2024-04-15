@@ -743,3 +743,68 @@ SyntaxError: invalid syntax (<string>, line 1)
 SyntaxError: invalid syntax (<string>, line 1)
 2024-04-15 15:59:57,290 - ERROR - 无法化简<< 35/100*total books >>: Sympify of expression 'could not parse '35/100*total books'' failed, because of exception being raised:
 SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 15:59:57,624 - ERROR - 无法计算<< (209, 250) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 15:59:59,793 - ERROR - 无法化简<< 18 crows >>: Sympify of expression 'could not parse '18 crows'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:00,447 - ERROR - 无法计算<< (400, 0) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 16:00:00,465 - ERROR - 无法计算<< (600, 0) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 16:00:00,467 - ERROR - 无法计算<< (200, 0) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 16:00:02,518 - ERROR - 无法化简<< 2*Felix'sWeight >>: Sympify of expression 'could not parse "2*Felix'sWeight"' failed, because of exception being raised:
+SyntaxError: unterminated string literal (detected at line 1) (<string>, line 1)
+2024-04-15 16:00:03,120 - ERROR - 无法化简<< 5.666...666 >>: Sympify of expression 'could not parse '5.666...666'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:03,569 - ERROR - 无法化简<< 9 ounces >>: Sympify of expression 'could not parse '9 ounces'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:03,571 - ERROR - 无法化简<< 3 ounces/turtle >>: Sympify of expression 'could not parse '3 ounces/turtle'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:04,283 - ERROR - 无法化简<< 18.666...18.67 >>: Sympify of expression 'could not parse '18.666...18.67'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:05,256 - ERROR - 无法计算<< (192, 0) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 16:00:05,391 - ERROR - 无法化简<< 18 apartments >>: Sympify of expression 'could not parse '18 apartments'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:05,395 - ERROR - 无法化简<< 102 apartments >>: Sympify of expression 'could not parse '102 apartments'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:07,362 - ERROR - 无法化简<< 10/100*amount borrowed >>: Sympify of expression 'could not parse '10/100*amount borrowed'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:07,380 - ERROR - 无法计算<< (1, 500.0) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 16:00:08,760 - ERROR - 无法化简<< 2*(number of chips in a bag) >>: Sympify of expression 'could not parse '2*(number of chips in a bag)'' failed, because of exception being raised:
+SyntaxError: invalid syntax. Perhaps you forgot a comma? (<string>, line 1)
+2024-04-15 16:00:10,225 - ERROR - 无法化简<< 2.666...6666 >>: Sympify of expression 'could not parse '2.666...6666'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:10,227 - ERROR - 无法化简<< 2.6666...6666*3 >>: Sympify of expression 'could not parse '2.6666...6666*3'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:12,077 - ERROR - 无法化简<< 6 hours, 20 minutes >>: Sympify of expression 'could not parse '6 hours, 20 minutes'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:12,154 - ERROR - 无法化简<< 9.333... >>: Sympify of expression 'could not parse '9.333...'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:13,355 - ERROR - 无法化简<< 33.333...33.333333333 >>: Sympify of expression 'could not parse '33.333...33.333333333'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:13,399 - ERROR - 无法化简<< 2/3 cup >>: Sympify of expression 'could not parse '2/3 cup'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:13,419 - ERROR - 无法化简<< 11/3 cup >>: Sympify of expression 'could not parse '11/3 cup'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:15,208 - ERROR - 无法化简<< 37.(5/100) >>: 'Float' object is not callable
+2024-04-15 16:00:16,037 - ERROR - 无法化简<< 1.2 million >>: Sympify of expression 'could not parse '1.2 million'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:17,783 - ERROR - 无法计算<< (11, 520) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 16:00:17,787 - ERROR - 无法计算<< (10, 500) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 16:00:18,029 - ERROR - 无法化简<< 15* >>: Sympify of expression 'could not parse '15*'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:18,700 - ERROR - 无法化简<< 1 hour 45 minutes >>: Sympify of expression 'could not parse '1 hour 45 minutes'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:19,029 - ERROR - 无法化简<< 6 ounces per dollar >>: Sympify of expression 'could not parse '6 ounces per dollar'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:21,130 - ERROR - 无法化简<< 40*(100-10 >>: Sympify of expression 'could not parse '40*(100-10'' failed, because of exception being raised:
+TokenError: ('EOF in multi-line statement', (2, 0))
+2024-04-15 16:00:22,600 - ERROR - 无法化简<< 1.5 hours >>: Sympify of expression 'could not parse '1.5 hours'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:22,607 - ERROR - 无法化简<< 5.5 hours >>: Sympify of expression 'could not parse '5.5 hours'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:22,818 - ERROR - 无法化简<< 1100-4*Stacy's berries-2*100 >>: Sympify of expression 'could not parse "1100-4*Stacy's berries-2*100"' failed, because of exception being raised:
+SyntaxError: unterminated string literal (detected at line 1) (<string>, line 1)
+2024-04-15 16:00:22,829 - ERROR - 无法化简<< 5.5 hours >>: Sympify of expression 'could not parse '5.5 hours'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:22,831 - ERROR - 无法化简<< 5.3 hours >>: Sympify of expression 'could not parse '5.3 hours'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:00:23,828 - ERROR - 无法化简<< 3*$.5 >>: Sympify of expression 'could not parse '3*$.5'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
