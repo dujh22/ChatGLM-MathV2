@@ -1,30 +1,35 @@
+import re
 import sympy as sp
 
-def evaluate_expression(expr):
+def preprocess_and_evaluate(expression):
+    # 处理货币符号
+    currency_match = re.match(r'\$(\d+(\.\d+)?)(\*\d+(\.\d+)?)?', expression)
+    if currency_match:
+        # 提取金额和可能的乘数
+        amount = float(currency_match.group(1))
+        multiplier = currency_match.group(3)
+        if multiplier:
+            # 计算乘积
+            result = amount * float(multiplier.strip('*'))
+            return f"${result:.2f}"
+        return f"${amount:.2f}"
+    
+    # 处理百分比（将其转换为小数）
+    expression = re.sub(r'(\d+)/(\d+)\*(.*)', lambda m: str(float(m.group(1)) / float(m.group(2))) + '*' + m.group(3), expression)
+
+    # 将可能的符号变量显式定义为符号
+    symbols = re.findall(r'[a-zA-Z_]+', expression)
+    local_dict = {s: sp.symbols(s) for s in symbols}
+
     try:
-        # 将表达式中的变量正确处理，如将'3m'解析为3*m
-        expr = expr.replace('Sandy\'s_age', 'Sandy_age')  # 替换为有效的变量名
-        expr = expr.replace('3m', '3*m')  # 替换为 3*m
-        expr = expr.replace('3B', '3*B')  # 替换为 3*B
-        # 处理隐式乘法，如'3(10)'应该为'3*10'
-        expr = expr.replace(')', ')*').replace(')*)', ')')  # 替换所有括号后的数字以添加乘号
-
-        # 使用 sympy 解析和计算表达式
-        expr = sp.sympify(expr)
-        return expr, expr.evalf()
+        # 解析并化简表达式
+        expr = sp.sympify(expression, locals=local_dict)
+        simplified_expr = sp.simplify(expr)
+        return str(simplified_expr)
     except Exception as e:
-        return None, str(e)
+        print("Error in processing:", str(e))
+        return expression
 
-# 测试一些表达式
-expressions = [
-    "10*Sandy's_age",
-    "27-3B/2",
-    "10+3(10)",
-    "16+3(16)+7",
-    "12+2(3)",
-    "3m+5"
-]
-
-for expr in expressions:
-    result, message = evaluate_expression(expr)
-    print(f"处理表达式 '{expr}' 的结果是：{result}, 错误信息：{message}")
+# 测试函数
+print(preprocess_and_evaluate("40/100*total_students"))
+print(preprocess_and_evaluate("$2.63*14"))

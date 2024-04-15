@@ -11,8 +11,9 @@ stream = client.chat.completions.create(
             "content": "你好！请问你是？",
         }
     ],
-    model="chatglm3-32b-v0.8-data",
-    # model = "glm-4-public",
+    # model="chatglm3-32b-v0.8-data",
+    
+    model = "glm-4-public",
     temperature=0.95,
     top_p=0.7,
     stream=True,

@@ -7,10 +7,65 @@ from get_data_for_codeTest import get_data_for_codeTest
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
 from use_gpt_api_for_glm_generate import gpt_generate
+# from use_glm_api_for_glm_generate import glm_generate
 from run_python_func import run_python
 from tqdm import tqdm
-from sympy import sympify
+import sympy as sp
 from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+import time
+import logging
+
+# 配置日志记录器
+logging.basicConfig(filename='Step3_JudgmentStepCalculatedCorrectly.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+# 输出函数
+def log(*args):
+    '''
+    输出函数
+    :param need_log: 是否需要输出
+    :param args: 输出参数
+    '''
+    need_log = False
+    if need_log:
+        print(*args)
+    time.sleep(0)
+
+# 公式预处理
+def formula_preprocessing(input_str):
+    # 去除数字前的前导零
+    input_str = re.sub(r'\b0+(\d+)', r'\1', input_str)
+    
+    # 处理时间表示 (假设时间表示为小时和分钟，如 4:30 转换为 4/30)
+    input_str = re.sub(r'(\d+):(\d+)', r'\1/\2', input_str)
+
+    # 处理百分比
+    input_str = re.sub(r'(\d+)%', r'(\1/100)', input_str)
+
+    # 处理分数表示中的空格（假设意图是将 3 3/4 写成 33/4）
+    input_str = re.sub(r'(\d+)\s+(\d+)/(\d+)', r'\1\2/\3', input_str)
+
+    # 使用正则表达式添加必要的乘法符号
+    input_str = re.sub(r'(\d)(\()', r'\1*\2', input_str)  # 处理数字后跟左括号的情况16+3(16)+7
+    input_str = re.sub(r'(\))(\d)', r'\1*\2', input_str)  # 处理右括号后跟数字的情况(1/2)20
+    input_str = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', input_str)  # 处理数字后跟变量的情况2x
+    input_str = re.sub(r'([a-zA-Z])(\()', r'\1*\2', input_str)  # 处理变量后跟左括号的情况x(5+2)
+
+    # 处理货币符号
+    currency_match = re.match(r'\$(\d+(\.\d+)?)(\*\d+(\.\d+)?)?', input_str)
+    if currency_match:
+        # 提取金额和可能的乘数
+        amount = float(currency_match.group(1))
+        multiplier = currency_match.group(3)
+        if multiplier:
+            # 计算乘积
+            result = amount * float(multiplier.strip('*'))
+            input_str = f"${result:.2f}"
+        input_str = f"${amount:.2f}"
+      
+    return input_str
+
 
 def get_llm_calculate_result(input_str):
     # prompt = f"""根据给定的描述生成可执行的Python代码用于计算。描述如下：“${input_str}” 请编写一个Python代码片段来计算，并打印结果。注意只返回python代码即可"""
@@ -22,63 +77,90 @@ def get_llm_calculate_result(input_str):
         # print(code)
         stdout, stderr = run_python(code)
         if stderr == "":
+            # 处理strout为纯数字结论，这里是一个特例，假设计算中只包含数字！！！！！！！！
+            pattern = re.compile(r"\b\d+\.?\d*\b") # 匹配所有数字
+            matches = pattern.findall(stdout)
+            if matches:
+                # 提取所有找到的数字
+                amounts = [float(match) for match in matches]
+                return amounts[0]
             return stdout
         else:
             answer = "python脚本无法运行"
     return answer
 
 def get_sympy_calculate_result(input_str):
+    log(f"计算表达式: {input_str}")
+    input_str = formula_preprocessing(input_str) # 公式预处理，采用规则库
+    log(f"计算表达式处理后: {input_str}")
+
+    # 定义可能的符号变量，确保它们被识别为符号而不是字符串
+    symbols = re.findall(r'[a-zA-Z]+', input_str)
+    symbols = set(symbols)  # 去除重复项
+    local_dict = {s: sp.symbols(s) for s in symbols}
+
     try:
-        actual_result = sympify(input_str).evalf()
+        # 将字符串转换为sympy表达式 expr = sp.sympify(input_str)
+        # 使用 locals 参数显式地将这些变量定义为符号
+        expr = sp.sympify(input_str, locals=local_dict)
+        # 计算表达式
+        result = expr
+        # 化简表达式
+        simplified_expr = sp.simplify(result)
+        log(f"化简结果: {simplified_expr}")
+        # 检查结果是否为布尔值
+        if isinstance(simplified_expr, bool):  # 直接使用 Python 的内建类型 bool
+            return simplified_expr
+        try:
+            # 如果是数学表达式，返回计算结果
+            actual_result = simplified_expr.evalf()
+            log(f"计算结果: {actual_result}")
+            return actual_result
+        except Exception as e:
+            logging.error(f"无法计算<< {simplified_expr} >>: {str(e)}")
+            actual_result = simplified_expr
+            # actual_result = get_llm_calculate_result(simplified_expr)
+            return actual_result
     except Exception as e:
-        print(f"计算表达式 {input_str} 时发生错误: {str(e)},使用python自动执行验证")
-
-    actual_result = get_llm_calculate_result(input_str)
-    pattern = re.compile(r"\b\d+\.?\d*\b")
-    matches = pattern.findall(actual_result)
-    if matches:
-        # 提取所有找到的数字
-        amounts = [float(match) for match in matches]
-        return amounts[0]
-
+        simplified_expr = input_str
+        # actual_result = get_llm_calculate_result(simplified_expr)
+        actual_result = simplified_expr
+        logging.error(f"无法化简<< {input_str} >>: {str(e)}")
+        
     return actual_result
 
 def check_calculation(input_str):
     # 使用正则表达式查找计算表达式和结果
-    # pattern = r"<<(.+?)=(.+?)>>"
-    pattern = r"<<?(.+?)=(.+?)>>?" # <>是可选的
+    pattern = r"<<(.+?)=(.+?)>>" # <>是必须的, =是必须的
+    # pattern = r"<<?(.+?)=(.+?)>>?" # <>是可选的
     matches = re.findall(pattern, input_str)
 
     # 初始化 expected_result
     expected_result = None
 
     # 遍历所有匹配项进行检查
-    for expr, expected_result in matches:
+    for expr, expected_result in matches: # expr变量会接收表达式的内容（如"20*40"），而expected_result变量会接收表达式的结果（如"800"）。
+        log(f"表达式: {expr}, 期望结果: {expected_result}")
+        # 为什么能根据=号分割，因为=号是必须的
         # 去除头尾的 <<
         expr = expr.lstrip("<")
+        # 如果还存在=，保留=前面的，如果不存在=，那就是其本身
+        expr = expr.split("=")[0]
         # 去除头尾的 >>
         expected_result = expected_result.rstrip(">")
+        # 如果还存在-，则保留=后面的
+        expected_result = expected_result.split("=")[-1]
         # 使用 sympy 计算表达式的结果
         actual_result = get_sympy_calculate_result(expr)
+        expected_result = get_sympy_calculate_result(expected_result)
+        log(f"实际结果: {actual_result}, 期望结果: {expected_result}")
         # 比较实际结果和期望结果
-        if actual_result != sympify(expected_result).evalf():
+        if actual_result != expected_result: # sympify(expected_result).evalf()是将expected_result转换为sympy对象并计算其值，evalf()方法返回计算结果。
+            # print(f"计算错误: {expr} = {actual_result}, 期望结果: {expected_result}")
             return 0, f"{actual_result}"
 
     # 如果所有计算都正确，则返回 True
     return 1, f"{expected_result}"
-
-def test_check_calculation():
-    # 测试函数
-    test_str1 = "这是一个测试字符串，包含一个计算<<20*40=800>>。"
-    test_str2 = "这是另一个测试字符串，包含一个错误计算<<30+10=50>>。"
-
-    # 应该返回 (True, None)
-    result1 = check_calculation(test_str1)
-
-    # 应该返回 (False, '计算错误：30+10 应该等于 40 而不是 50')
-    result2 = check_calculation(test_str2)
-
-    print(result1, result2)
 
 # 串行处理
 def process_jsonl_file(source_path, dest_path):
@@ -127,8 +209,6 @@ def process_jsonl_file_concurrent(source_path, dest_path):
     # 写入结果到目标文件
     with open(dest_path, 'w', encoding='utf-8') as file:
         file.writelines(results)
-
-
 
 def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder):
     
