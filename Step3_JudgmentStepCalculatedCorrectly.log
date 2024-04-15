@@ -895,3 +895,38 @@ SyntaxError: invalid syntax (<string>, line 1)
 SyntaxError: invalid syntax (<string>, line 1)
 2024-04-15 16:01:03,543 - ERROR - 无法化简<< 5+3*(trumpet)+8*(trombone)+11*(drum)+2*(clarinet)+3*(French horn) >>: Sympify of expression 'could not parse '5+3*(trumpet)+8*(trombone)+11*(drum)+2*(clarinet)+3*(French horn)'' failed, because of exception being raised:
 SyntaxError: invalid syntax. Perhaps you forgot a comma? (<string>, line 1)
+2024-04-15 16:01:03,855 - ERROR - 无法化简<< 1 apple >>: Sympify of expression 'could not parse '1 apple'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:04,751 - ERROR - 无法计算<< (-14, -8, 1) >>: 'Tuple' object has no attribute 'evalf'
+2024-04-15 16:01:05,392 - ERROR - 无法化简<< 0.5 hours >>: Sympify of expression 'could not parse '0.5 hours'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:05,403 - ERROR - 无法化简<< 20 minutes >>: Sympify of expression 'could not parse '20 minutes'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:06,154 - ERROR - 无法化简<< 75000*$.2 >>: Sympify of expression 'could not parse '75000*$.2'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:06,253 - ERROR - 无法化简<< 16 million >>: Sympify of expression 'could not parse '16 million'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:06,281 - ERROR - 无法化简<< 4 million >>: Sympify of expression 'could not parse '4 million'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:06,289 - ERROR - 无法化简<< 8 million >>: Sympify of expression 'could not parse '8 million'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:06,310 - ERROR - 无法化简<< 2 million >>: Sympify of expression 'could not parse '2 million'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:06,317 - ERROR - 无法化简<< 1 million >>: Sympify of expression 'could not parse '1 million'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:07,056 - ERROR - 无法化简<< <<2 >>: Sympify of expression 'could not parse '<<2'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:08,097 - ERROR - 无法化简<< 1.5 hours >>: Sympify of expression 'could not parse '1.5 hours'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:08,351 - ERROR - 无法化简<< 50* >>: Sympify of expression 'could not parse '50*'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:09,281 - ERROR - 无法化简<< 2.333... >>: Sympify of expression 'could not parse '2.333...'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:09,283 - ERROR - 无法化简<< 21-2.333...21-2 >>: Sympify of expression 'could not parse '21-2.333...21-2'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:10,052 - ERROR - 无法化简<< 27 fruit >>: Sympify of expression 'could not parse '27 fruit'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:10,134 - ERROR - 无法化简<< 10.666...11 >>: Sympify of expression 'could not parse '10.666...11'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-15 16:01:12,086 - ERROR - 无法化简<< 3 hours/day >>: Sympify of expression 'could not parse '3 hours/day'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
