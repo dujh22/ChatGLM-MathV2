@@ -19,19 +19,6 @@ import logging
 # 配置日志记录器
 logging.basicConfig(filename='Step3_JudgmentStepCalculatedCorrectly.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
-# 输出函数
-def log(*args):
-    '''
-    输出函数
-    :param need_log: 是否需要输出
-    :param args: 输出参数
-    '''
-    need_log = False
-    if need_log:
-        print(*args)
-    time.sleep(0)
-
 # 公式预处理
 def formula_preprocessing(input_str):
     # 去除数字前的前导零
@@ -63,7 +50,31 @@ def formula_preprocessing(input_str):
             result = amount * float(multiplier.strip('*'))
             input_str = f"${result:.2f}"
         input_str = f"${amount:.2f}"
-      
+        
+    # 删除那些前后没有运算符且前面有数字的字符串，例如 '45 months' -> '45'
+    input_str = re.sub(r'(\d+)\s+([a-zA-Z\' ]+)(?![\*\/\-\+\(\)0-9])', r'\1', input_str)
+    
+    # 处理33.333...3333333333为33.333
+    # 寻找省略号的位置
+    ellipsis_index = input_str.find('...')
+    if ellipsis_index != -1:
+        # 找到省略号后面紧跟的数字部分并截断
+        end_index = ellipsis_index + 3
+        while end_index < len(input_str) and input_str[end_index].isdigit():
+            end_index += 1
+        
+        # 生成新的表达式，省略后面的数字
+        input_str = input_str[:ellipsis_index] + input_str[end_index:]
+    
+    # 重新处理可能由于删除字符串导致的多余空格
+    input_str = ' '.join(input_str.split())
+
+    # 删除包含逗号的数字
+    input_str = ' '.join([part for part in input_str.split() if ',' not in part])
+
+    # 重新处理可能由于删除字符串导致的多余空格
+    input_str = re.sub(r'\s+', ' ', input_str).strip()
+
     return input_str
 
 
@@ -90,9 +101,7 @@ def get_llm_calculate_result(input_str):
     return answer
 
 def get_sympy_calculate_result(input_str):
-    log(f"计算表达式: {input_str}")
     input_str = formula_preprocessing(input_str) # 公式预处理，采用规则库
-    log(f"计算表达式处理后: {input_str}")
 
     # 定义可能的符号变量，确保它们被识别为符号而不是字符串
     symbols = re.findall(r'[a-zA-Z]+', input_str)
@@ -107,17 +116,15 @@ def get_sympy_calculate_result(input_str):
         result = expr
         # 化简表达式
         simplified_expr = sp.simplify(result)
-        log(f"化简结果: {simplified_expr}")
         # 检查结果是否为布尔值
         if isinstance(simplified_expr, bool):  # 直接使用 Python 的内建类型 bool
             return simplified_expr
         try:
             # 如果是数学表达式，返回计算结果
             actual_result = simplified_expr.evalf()
-            log(f"计算结果: {actual_result}")
             return actual_result
         except Exception as e:
-            logging.error(f"无法计算<< {simplified_expr} >>: {str(e)}")
+            logging.error(f"incalculable << {input_str} >>: {str(e)}, and the simplified expression is << {simplified_expr} >>")
             actual_result = simplified_expr
             # actual_result = get_llm_calculate_result(simplified_expr)
             return actual_result
@@ -125,7 +132,7 @@ def get_sympy_calculate_result(input_str):
         simplified_expr = input_str
         # actual_result = get_llm_calculate_result(simplified_expr)
         actual_result = simplified_expr
-        logging.error(f"无法化简<< {input_str} >>: {str(e)}")
+        logging.error(f"Unsimplified << {input_str} >>: {str(e)}, and the simplified expression is << {simplified_expr} >>")
         
     return actual_result
 
@@ -140,7 +147,7 @@ def check_calculation(input_str):
 
     # 遍历所有匹配项进行检查
     for expr, expected_result in matches: # expr变量会接收表达式的内容（如"20*40"），而expected_result变量会接收表达式的结果（如"800"）。
-        log(f"表达式: {expr}, 期望结果: {expected_result}")
+        # logging.info(f"expr: {expr}, expected_result: {expected_result}")
         # 为什么能根据=号分割，因为=号是必须的
         # 去除头尾的 <<
         expr = expr.lstrip("<")
@@ -153,7 +160,7 @@ def check_calculation(input_str):
         # 使用 sympy 计算表达式的结果
         actual_result = get_sympy_calculate_result(expr)
         expected_result = get_sympy_calculate_result(expected_result)
-        log(f"实际结果: {actual_result}, 期望结果: {expected_result}")
+        # logging.info(f"Actual result: {actual_result}, Desired result: {expected_result}")
         # 比较实际结果和期望结果
         if actual_result != expected_result: # sympify(expected_result).evalf()是将expected_result转换为sympy对象并计算其值，evalf()方法返回计算结果。
             # print(f"计算错误: {expr} = {actual_result}, 期望结果: {expected_result}")
@@ -230,11 +237,13 @@ def main():
     base_folder = "F://code//github//ChatGLM-MathV2"
     dataset_name = "peiyi9979_Math_Shepherd"
     source_folder = base_folder + '//raw_data//' + dataset_name
+
+    mid_name = base_folder + '//data//' + dataset_name
+
     if code_test_state:
         get_data_for_codeTest(source_folder)
         source_folder = source_folder + "_for_codeTest"
-    mid_name = base_folder + '//data//' + dataset_name
-    if code_test_state:
+
         target_folder1 = mid_name + "_for_codeTest" + "_Step1_SplitByRow_forMathShepherd"
         target_folder2 = mid_name + "_for_codeTest" + "_Step2_IsCalculationOrReasoning"
         target_folder3 = mid_name + "_for_codeTest" + "_Step3_JudgmentStepCalculatedCorrectly"
@@ -243,12 +252,9 @@ def main():
         target_folder2 = mid_name + "_Step2_IsCalculationOrReasoning"
         target_folder3 = mid_name + "_Step3_JudgmentStepCalculatedCorrectly"
 
-    #Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
-    #Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
+    # Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
+    # Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
     Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
-
-def main2():
-    print(get_llm_calculate_result("Paul is collecting license plates from different states. He has plates from 40 different states. For each percentage point of total US states that he has, his parents will give him $2. How much does he earn from them?"))
 
 if __name__ == '__main__':
     main()
