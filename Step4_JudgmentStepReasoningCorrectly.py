@@ -121,6 +121,10 @@ def process_jsonl_file_concurrent(source_path, dest_path):
             for future in concurrent.futures.as_completed(future_to_line):
                 results.append(future.result())
                 progress.update(1)  # 更新进度条
+    
+     # 写入结果到目标文件
+    with open(dest_path, 'w', encoding='utf-8') as file:
+        file.writelines(results)
 
 # 实现每1000条数据保存一次，并且能够在之后的运行中从上次结束的地方继续开始处理
 def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, start_from=0):
@@ -134,7 +138,7 @@ def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, star
     results = []
 
    # 创建线程池进行并行处理
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=50) as executor:
         # 从 start_from 开始批量处理数据
         for chunk_start in range(0, len(lines), chunk_size):
             chunk_end = min(chunk_start + chunk_size, len(lines))
@@ -150,11 +154,8 @@ def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, star
             # 保存这一批数据到文件
             save_file_name = f"{dest_path}_{chunk_start+1}-{chunk_end}.jsonl"
             with open(save_file_name, 'w', encoding='utf-8') as f:
-                for result in results:
-                    f.write(json.dumps(result) + '\n')
-            
+                    f.writelines(results)
             print(f"Data saved to {save_file_name}")
-
 
 def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
     
@@ -175,7 +176,8 @@ def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
 # 使用方法：
 def main():
     code_test_state = False
-    base_folder = "F://code//github//ChatGLM-MathV2"
+    # base_folder = "F://code//github//ChatGLM-MathV2"
+    base_folder = "/workspace/dujh22/ChatGLM-MathV2"
     dataset_name = "peiyi9979_Math_Shepherd"
     source_folder = base_folder + '//raw_data//' + dataset_name
 
