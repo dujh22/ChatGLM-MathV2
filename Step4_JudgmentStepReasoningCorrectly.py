@@ -1,7 +1,15 @@
 import os
 import json
 import re
-from use_gpt_api_for_glm_generate import gpt_generate
+
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import concurrent.futures
+from tqdm import tqdm
+
+# from use_gpt_api_for_glm_generate import gpt_generate
+
+from chatglm import ChatGLM
+ChatGLM = ChatGLM()
 
 # 修正函数
 # 1.在 content 字符串中查找被 << 和 >> 包围的表达式。
@@ -33,7 +41,7 @@ def replace_calculated_result(content, calculated_result):
 def check_reasoning(content, backgroud):
     try:
         # 历史信息的构造
-        history = f"question: {backgroud["question"]}\n"
+        history = f"question: {backgroud['question']}\n"
         for step, info in backgroud.items():
             if step != "question":
                 temp_content = info["content"]
@@ -41,17 +49,26 @@ def check_reasoning(content, backgroud):
                     # 找到info["content"]中错误的部分进行替换
                     # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
                     temp_content = replace_calculated_result(temp_content, info["StepCalculatedCorrectlyResult"])
-                history += f"{step}: {info['content']}\n"
-        prompt = f"""判断给定的推理描述是否合理。描述如下：{content}, 如果信息不足，可参考历史信息。，具体如下：{history}。如果推理正确，只需要回答“yes”，否则请只回复正确的推理以及推理结果。"""
-        response = gpt_generate(prompt)
-        if responce == "yes":
+                history += f"{step}: {temp_content}\n"
+        # prompt = f"""判断给定的推理描述是否合理。描述如下：{content}. \n 如果信息不足，可参考可能正确但不一定正确的历史信息,具体如下：{history}. \n 如果推理正确，只需要回答“yes”，否则请只回复修正后的的推理描述。"""
+        prompt = f"""Determine whether the given reasoning description is reasonable. The description is as follows:{content}. \n If the information is insufficient, refer to the history which may be correct but not necessarily so, as follows: {history}. \n If the reasoning is correct, just answer "yes", otherwise please only reply with a corrected description of the reasoning."""
+        
+        # response = gpt_generate(prompt)
+        response = ChatGLM.generate(prompt)  # 调用生成方法
+        
+        # 提取 response 的前三个字符，并将它们转换成小写来进行判断。
+        # 注意也有可能是response中第一句话里面存在correct但不存在incorrect，所以需要加上or ()
+        
+        # 获取response的第一句话或者如果没有符号就是完整的response
+        response_first_sentence = response.split(".")[0]
+
+        if response_first_sentence[:3].lower() == "yes" or ("correct" in response_first_sentence.lower() and "incorrect" not in response_first_sentence.lower()):  
             return 1, content
         else:
             return 0, response
     except Exception as e:
         print(e)
         return 0, "Error"
-
 
 # 串行处理
 def process_jsonl_file(source_path, dest_path):
@@ -62,7 +79,7 @@ def process_jsonl_file(source_path, dest_path):
             # 遍历每一步的解决方案
             if 'solution' in data:
                 # 获取历史信息
-                history = {"question": data["question"]}
+                history = {"question": data["questions"]}
                 for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
                     # 判断并添加新键
                     info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = check_reasoning(info['content'], history)
@@ -77,7 +94,7 @@ def process_line(line):
     data = json.loads(line)
     if 'solution' in data:
         # 获取历史信息
-        history = {"question": data["question"]}
+        history = {"question": data["questions"]}
         for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
             # 判断并添加新键
             info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = check_reasoning(info['content'], history)
@@ -105,9 +122,39 @@ def process_jsonl_file_concurrent(source_path, dest_path):
                 results.append(future.result())
                 progress.update(1)  # 更新进度条
 
-    # 写入结果到目标文件
-    with open(dest_path, 'w', encoding='utf-8') as file:
-        file.writelines(results)
+# 实现每1000条数据保存一次，并且能够在之后的运行中从上次结束的地方继续开始处理
+def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, start_from=0):
+    # 读取文件的所有行
+    with open(source_path, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+    
+    # 只处理从 start_from 开始的数据
+    lines = lines[start_from:]
+
+    results = []
+
+   # 创建线程池进行并行处理
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        # 从 start_from 开始批量处理数据
+        for chunk_start in range(0, len(lines), chunk_size):
+            chunk_end = min(chunk_start + chunk_size, len(lines))
+            future_to_line = {executor.submit(process_line, line): line for line in lines[chunk_start:chunk_end]}
+            results = []
+            
+            # 使用 tqdm 创建进度条
+            with tqdm(total=len(future_to_line), desc=f'Processing lines {chunk_start+1} to {chunk_end}') as progress:
+                for future in as_completed(future_to_line):
+                    results.append(future.result())
+                    progress.update(1)  # 更新进度条
+            
+            # 保存这一批数据到文件
+            save_file_name = f"{dest_path}_{chunk_start+1}-{chunk_end}.jsonl"
+            with open(save_file_name, 'w', encoding='utf-8') as f:
+                for result in results:
+                    f.write(json.dumps(result) + '\n')
+            
+            print(f"Data saved to {save_file_name}")
+
 
 def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
     
@@ -121,12 +168,13 @@ def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
             source_path = os.path.join(source_folder, filename)
             print("正在处理文件:", source_path)
             dest_path = os.path.join(target_folder, filename)
-            process_jsonl_file(source_path, dest_path)
+            # process_jsonl_file(source_path, dest_path)
             # process_jsonl_file_concurrent(source_path, dest_path)
+            process_jsonl_file_concurrent2(source_path, dest_path)
 
 # 使用方法：
 def main():
-    code_test_state = True
+    code_test_state = False
     base_folder = "F://code//github//ChatGLM-MathV2"
     dataset_name = "peiyi9979_Math_Shepherd"
     source_folder = base_folder + '//raw_data//' + dataset_name
