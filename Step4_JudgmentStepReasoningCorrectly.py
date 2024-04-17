@@ -6,6 +6,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import concurrent.futures
 from tqdm import tqdm
 
+from get_data_for_codeTest import get_data_for_codeTest
+from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
+from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
+from Step3_JudgmentStepCalculatedCorrectly import Step3_JudgmentStepCalculatedCorrectly
+from Check1_JsonlVisualization import Check1_JsonlVisualization
+
 # from use_gpt_api_for_glm_generate import gpt_generate
 
 from chatglm import ChatGLM
@@ -15,43 +21,45 @@ ChatGLM = ChatGLM()
 # 1.在 content 字符串中查找被 << 和 >> 包围的表达式。
 # 2.替换 = 后面直到 >> 的内容为 StepCalculatedCorrectlyResult 的值。
 # 3.如果 >> 后的内容（如果存在）与 = 和 >> 之间的内容相同，则也将其替换为 StepCalculatedCorrectlyResult。
-def replace_calculated_result(content, calculated_result):
-    # 使用正则表达式找到 << 和 >> 之间的内容
-    pattern = re.compile(r'<<([^>]*=[^>]*)>>')
-    match = pattern.search(content)
-    
-    if match:
-        full_expr = match.group(0)  # 完整的 <<...>> 表达式
-        expr_inside = match.group(1)  # << 和 >> 之间的内容
-        equal_pos = expr_inside.find('=')
-        original_result = expr_inside[equal_pos+1:].strip()  # 等号后面的结果
-        
-        # 构造新的替换表达式，其中包含正确的计算结果
-        new_expr = f"<<{expr_inside[:equal_pos+1]}{calculated_result}>>"
-        
-        # 替换原内容中的表达式
-        content = content.replace(full_expr, new_expr)
-        
-        # 替换 >> 后面相同的结果
-        content = re.sub(r'\b' + re.escape(original_result) + r'\b', calculated_result, content)
+# content = "The equation a = 2 results in a = 2, and then we see b = 3, which leads to b = 3."
+# equations = ["a = 2", "b = 3"]
+# judge = [0, 1]  # 只替换a的结果
+# result = ["5", "4"]  # 将a的结果替换为5，b的结果不变（虽然这里b不需要替换）
+def replace_calculated_result(content, equations, judge, result):
+    for i, equation in enumerate(equations):
+        if judge[i] == 0:  # 需要修改的等式
+            # 分解等式，获取左侧变量和原始结果
+            variable, original_result = equation.split('=')
+            variable = variable.strip()
+            original_result = original_result.strip()
+            
+            # 构造用于搜索和替换的正则表达式
+            search_pattern = re.escape(variable) + r'\s*=\s*' + re.escape(original_result)
+            replace_pattern = f'{variable} = {result[i]}'
+            
+            # 替换等式
+            content = re.sub(search_pattern, replace_pattern, content)
+            
+            # 替换全文中的原结果
+            content = re.sub(r'\b' + re.escape(original_result) + r'\b', result[i], content)
     
     return content
 
+
 # 判断单步推理是否正确
-def check_reasoning(content, backgroud):
+def check_reasoning(per_step, content, question, history):
     try:
         # 历史信息的构造
-        history = f"question: {backgroud['question']}\n"
-        for step, info in backgroud.items():
-            if step != "question":
-                temp_content = info["content"]
-                if info["JudgmentStepCalculatedCorrectly"] == 0:
-                    # 找到info["content"]中错误的部分进行替换
-                    # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
-                    temp_content = replace_calculated_result(temp_content, info["StepCalculatedCorrectlyResult"])
-                history += f"{step}: {temp_content}\n"
-        # prompt = f"""判断给定的推理描述是否合理。描述如下：{content}. \n 如果信息不足，可参考可能正确但不一定正确的历史信息,具体如下：{history}. \n 如果推理正确，只需要回答“yes”，否则请只回复修正后的的推理描述。"""
-        prompt = f"""Determine whether the given reasoning description is reasonable. The description is as follows:{content}. \n If the information is insufficient, refer to the history which may be correct but not necessarily so, as follows: {history}. \n If the reasoning is correct, just answer "yes", otherwise please only reply with a corrected description of the reasoning."""
+        historys = ""
+        for step, info in history.items():
+            temp_content = info["content"]
+            if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
+                # 找到info["content"]中错误的部分进行替换
+                # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
+                temp_content = replace_calculated_result(temp_content, info["equation"], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
+            historys += f"{step}: {temp_content}\n"
+        promt = f"""我正在尝试解决一个数学问题，具体问题是：“{question}”。\n\n 我目前采用的解题步骤如下：“{historys}” \n\n 现在我正在推理的步骤是：“{per_step}”，具体推理内容是：“{content}”。\n\n 请评估我的推理过程。如果我目前的推理步骤正确并且与问题相关，请回答“yes”。如果推理步骤错误或者不相关，请指出问题所在，并提供正确或更相关的推理步骤。"""
+        prompt = f"""I am trying to solve a math problem, the specific question is: \"{question}\". \n\n The steps I have used so far to solve the problem are as follows: \"{historys}\" \n\n Now I am reasoning about the steps:\"{per_step}\" and the specific reasoning is:\"{content}\". \n\n Please evaluate my reasoning process. If my current reasoning steps are correct and relevant to the question, please answer "yes". If the reasoning steps are incorrect or irrelevant, please point out the problem and provide the correct or more relevant reasoning steps."""
         
         # response = gpt_generate(prompt)
         response = ChatGLM.generate(prompt)  # 调用生成方法
@@ -79,10 +87,11 @@ def process_jsonl_file(source_path, dest_path):
             # 遍历每一步的解决方案
             if 'solution' in data:
                 # 获取历史信息
-                history = {"question": data["questions"]}
+                history = {}
+                question = data['questions']
                 for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
                     # 判断并添加新键
-                    info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = check_reasoning(info['content'], history)
+                    info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = check_reasoning(step, info['content'], question, history)
                     # 添加到历史信息中
                     history[step] = info
             # 将修改后的数据写回新的JSONL文件
@@ -94,10 +103,11 @@ def process_line(line):
     data = json.loads(line)
     if 'solution' in data:
         # 获取历史信息
-        history = {"question": data["questions"]}
+        history = {}
+        question = data['questions']
         for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
             # 判断并添加新键
-            info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = check_reasoning(info['content'], history)
+            info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = check_reasoning(step, info['content'], question, history)
             # 添加到历史信息中
             history[step] = info
     # 将处理后的数据转换为字符串以便写入文件
@@ -156,6 +166,7 @@ def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, star
             with open(save_file_name, 'w', encoding='utf-8') as f:
                     f.writelines(results)
             print(f"Data saved to {save_file_name}")
+            Check1_JsonlVisualization(save_file_name)
 
 def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
     
@@ -175,16 +186,16 @@ def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
 
 # 使用方法：
 def main():
-    code_test_state = False
-    # base_folder = "F://code//github//ChatGLM-MathV2"
-    base_folder = "/workspace/dujh22/ChatGLM-MathV2"
+    code_test_state = True
+    base_folder = "F://code//github//ChatGLM-MathV2"
+    # base_folder = "/workspace/dujh22/ChatGLM-MathV2"
     dataset_name = "peiyi9979_Math_Shepherd"
     source_folder = base_folder + '//raw_data//' + dataset_name
 
     mid_name = base_folder + '//data//' + dataset_name
 
     if code_test_state:
-        # get_data_for_codeTest(source_folder)
+        get_data_for_codeTest(source_folder, new_folder_suffix='_for_codeTest', num_points=100)
         source_folder = source_folder + "_for_codeTest"
 
         target_folder1 = mid_name + "_for_codeTest" + "_Step1_SplitByRow_forMathShepherd"
@@ -197,10 +208,12 @@ def main():
         target_folder3 = mid_name + "_Step3_JudgmentStepCalculatedCorrectly"
         target_folder4 = mid_name + "_Step4_JudgmentStepReasoningCorrectly"
 
-    # Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
-    # Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
-    # Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
+    #Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
+    #Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
+    #Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
     Step4_JudgmentStepReasoningCorrectly(target_folder3, target_folder4)
+
+   
 
 if __name__ == '__main__':
     main()
