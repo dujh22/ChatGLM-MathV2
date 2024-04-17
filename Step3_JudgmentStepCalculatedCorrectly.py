@@ -96,7 +96,7 @@ def get_llm_calculate_result(input_str):
         if stderr == "":
             return stdout, code
         else:
-            answer = "python脚本无法运行"
+            answer = "Python scripts not running" # "python脚本无法运行"
     return answer, code
 
 def get_sympy_calculate_result(input_str):

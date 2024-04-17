@@ -1,19 +1,48 @@
 import json
+import os
+from tqdm import tqdm
+from tabulate import tabulate
+from Step4_JudgmentStepReasoningCorrectly import replace_calculated_result
 
 from chatglm import ChatGLM
 ChatGLM = ChatGLM()
 
-
 def read_jsonl(file_path):
-    """读取JSONL文件，返回一个包含多个JSON对象的列表。"""
+    """读取JSONL文件，返回一个包含多个JSON对象的列表，并为每个对象添加一个唯一的索引作为ID。"""
     data = []
+    if not os.path.exists(file_path):
+        return data
     with open(file_path, 'r', encoding='utf-8') as file:
-        for line in file:
-            data.append(json.loads(line))
+        for index, line in enumerate(file):
+            entry = json.loads(line)
+            entry['id'] = index  # 增加唯一标识符
+            data.append(entry)
     return data
 
-def analyze_data(json_data):
+def read_processed_jsonl(file_path):
+    """读取JSONL文件，返回一个包含多个JSON对象的列表，并为每个对象添加一个唯一的索引作为ID。"""
+    data = []
+    if not os.path.exists(file_path):
+        return data
+    with open(file_path, 'r', encoding='utf-8') as file:
+        for line in file:
+            entry = json.loads(line)
+            data.append(entry)
+    return data
+
+
+def append_jsonl(data, file_path):
+    """追加数据到JSONL文件中，并确保目录存在。"""
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'a', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False)
+        file.write('\n')
+
+def analyze_data(json_data, processed_json_data, output_file_path):
     """分析JSON对象列表，计算所需的统计数据。"""
+    processed_ids = {entry['id'] for entry in processed_json_data}  # 创建一个包含所有已处理ID的集合
+
+    json_data = json_data[:5]
     total_entries = len(json_data)  # 总的JSON对象数
     all_correct_json_count = 0  # 所有正确标注的JSON对象数
     sympy_count = 0  # 使用SymPy的次数
@@ -25,8 +54,9 @@ def analyze_data(json_data):
         'JudgmentStepReasoningCorrectly': 0,
         'total_steps': 0  # 总步骤数
     }
-    
-    for entry in json_data:
+
+    # for entry in processed_json_data:
+    for entry in tqdm(processed_json_data, desc='Processing'):
         all_correct = True
         sympy_used = False
         python_used = False
@@ -39,42 +69,33 @@ def analyze_data(json_data):
             # 检查每种判断类型
 
             # 检测针对计算步骤的判断是否正确
-            # prompt1 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry['question']}。\n\n 我目前采用的解题步骤如下：{history} \n\n 现在我要检查的步骤是：{step_key}，内容是：{step_info['content']}。\n\n请问这个步骤的计算是否正确？（是/否）"""
-            prompt1 = f"""I'm trying to check that the solution to a math problem is calculated correctly and reasoned correctly. The specific problem is: {entry['question']} \n\n The steps I have used so far to solve the problem are as follows:{history} \n\n Now the steps I want to check are:{step_key} and the content is:{step_info['content']}. \n\n Is this step calculated correctly? (Yes/No)
-            """
-            response1 = ChatGLM.generate(prompt1)
-            # 获取response的第一句话或者如果没有符号就是完整的response
-            response1_first_sentence = response1.split(".")[0]
+            response1 = step_info['LLMJudgmentStepCalculatedCorrectly']
+        
+            if response1 == "no llm judge":
+                print(response1)
+            else:
+                # 获取response的第一句话或者如果没有符号就是完整的response
+                response1_first_sentence = response1.split(".")[0]
 
-            if response1_first_sentence[:3].lower() == "yes" or ("correct" in response1_first_sentence.lower() and "incorrect" not in response1_first_sentence.lower()):  # 如果计算正确
-                if all(item == 1 for item in step_info['JudgmentStepCalculatedCorrectly']):
+                if response1_first_sentence[:3].lower() == "yes" or ("correct" in response1_first_sentence.lower() and "incorrect" not in response1_first_sentence.lower()):  # 如果计算正确
                     correct_judgments['JudgmentStepCalculatedCorrectly'] += 1
                 else:
                     all_correct = False
-            else:
-                if any(item == 0 for item in step_info['JudgmentStepCalculatedCorrectly']):
-                  correct_judgments['JudgmentStepCalculatedCorrectly'] += 1
-                else:
-                    all_correct = False  
+
             
             # 检测针对推理步骤的判断是否正确
-            # prompt2 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry['question']}。\n\n 我目前采用的解题步骤如下：{history} \n\n 现在我要检查的步骤是：{step_key}，内容是：{step_info['content']}。\n\n请问这个步骤的推理是否合理？（是/否）"""
-            prompt2 = f"""I'm trying to check that the solution to a math problem is calculated correctly and reasoned correctly. The specific problem is: {entry['question']} \n\n The steps I have used so far to solve the problem are as follows:{history} \n\n Now the steps I want to check are:{step_key} and the content is:{step_info['content']}. \n\n Is this step reasoned correctly? (Yes/No)"""
-            response2 = ChatGLM.generate(prompt2)
-            # 获取response的第一句话或者如果没有符号就是完整的response
-            response2_first_sentence = response2.split(".")[0]
+            response2 = step_info['LLMJudgmentStepReasoningCorrectly']
 
-            if response2_first_sentence[:3].lower() == "yes" or ("correct" in response2_first_sentence.lower() and "incorrect" not in response2_first_sentence.lower()):  # 如果推理正确
-                if step_info['JudgmentStepReasoningCorrectly'] == 1:
-                    correct_judgments['JudgmentStepReasoningCorrectly'] += 1
-                else:
-                    all_correct = False
+            if response2 == "no llm judge":
+                print(response2)
             else:
-                if step_info['JudgmentStepReasoningCorrectly'] == 0:
+                # 获取response的第一句话或者如果没有符号就是完整的response
+                response2_first_sentence = response2.split(".")[0]
+
+                if response2_first_sentence[:3].lower() == "yes" or ("correct" in response2_first_sentence.lower() and "incorrect" not in response2_first_sentence.lower()):  # 如果推理正确
                     correct_judgments['JudgmentStepReasoningCorrectly'] += 1
                 else:
                     all_correct = False
-
             
             # 检查是否使用了SymPy或Python编程
             if 'leftSideOfEqual_use_sympy_or_llm' in step_info:
@@ -97,6 +118,107 @@ def analyze_data(json_data):
         if python_used:
             python_code_count += 1
     
+    # for entry in json_data:
+    for entry2 in tqdm(json_data, desc='Processing'):
+        if entry2['id'] in processed_ids:
+            continue  # 跳过已处理的数据
+
+        all_correct = True
+        sympy_used = False
+        python_used = False
+        
+        history2 = ""
+        for step_key2, step_info2 in entry2['solution'].items():
+            # 计算总步骤数
+            correct_judgments['total_steps'] += 1
+            
+            # 检查每种判断类型
+
+            # 检测针对计算步骤的判断是否正确
+
+            # 获取修正后的结果
+            temp_content2 = replace_calculated_result(step_info2['content'], step_info2["equation"], step_info2["JudgmentStepCalculatedCorrectly"], step_info2["StepCalculatedCorrectlyResult"])
+            temp_true2 = False
+            if all(item == 1 for item in step_info2['JudgmentStepCalculatedCorrectly']):
+                temp_true2 = True
+            
+            if temp_true2 == True:
+                # prompt1 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为计算是正确的。\n\n 请问我的判断是否正确？（是/否）"""
+                prompt1 = f"""I am trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The steps I have used so far to solve the problem are as follows:{history2} \n\n The steps I would like to check now are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the calculation is correct. \n\n May I ask if my judgment is correct? (Yes/No)"""
+            else:
+                # prompt1 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步计算是错误的，应该修改为：{temp_content2} 请问我的判断和修改是否正确？\n\n（是/否）"""
+                prompt1 = f"""I'm trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think this step is calculated incorrectly and should be modified as: {temp_content2} Am I correct in my judgment and modification? \n\n (yes/no)"""
+
+            try:
+                response1 = ChatGLM.generate(prompt1)
+            except:
+                response1 = "no llm judge"
+            step_info2['LLMJudgmentStepCalculatedCorrectly'] = response1  # 更新entry
+
+            if response1 == "no llm judge":
+                print(response1)
+            else:
+                # 获取response的第一句话或者如果没有符号就是完整的response
+                response1_first_sentence = response1.split(".")[0]
+
+                if response1_first_sentence[:3].lower() == "yes" or ("correct" in response1_first_sentence.lower() and "incorrect" not in response1_first_sentence.lower()):  # 如果计算正确
+                    correct_judgments['JudgmentStepCalculatedCorrectly'] += 1
+                else:
+                    all_correct = False
+            
+            # 检测针对推理步骤的判断是否正确
+            temp_true1 = False
+            if step_info2['JudgmentStepReasoningCorrectly'] == 0:
+                temp_true1 = True
+            
+            if temp_true1 == True:
+                # prompt2 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步的推理是正确的。\n\n 请问我的判断是否正确？（是/否）"""
+                prompt2 = f"""I am trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the reasoning in this step is correct. \n\n May I ask if my judgment is correct? (Yes/No)"""
+            else:
+                # prompt2 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步的推理是错误的，应该修改为：{step_info2['StepReasoningCorrectlyResult']}。\n\n 请问我的判断是否正确？（是/否）"""
+                prompt2 = f"""I'm trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the reasoning in this step is wrong and should be changed to: {step_info2['StepReasoningCorrectlyResult']}. \n\n Is my judgment correct? (Yes/No)"""
+            
+            try:
+                response2 = ChatGLM.generate(prompt2)
+            except:
+                response2 = "no llm judge"
+            step_info2['LLMJudgmentStepReasoningCorrectly'] = response2  # 更新entry
+
+            if response2 == "no llm judge":
+                print(response2)
+            else:
+                # 获取response的第一句话或者如果没有符号就是完整的response
+                response2_first_sentence = response2.split(".")[0]
+
+                if response2_first_sentence[:3].lower() == "yes" or ("correct" in response2_first_sentence.lower() and "incorrect" not in response2_first_sentence.lower()):  # 如果推理正确
+                    correct_judgments['JudgmentStepReasoningCorrectly'] += 1
+                else:
+                    all_correct = False
+    
+            # 检查是否使用了SymPy或Python编程
+            if 'leftSideOfEqual_use_sympy_or_llm' in step_info2:
+                if 'sympy and llm' in step_info2['leftSideOfEqual_use_sympy_or_llm']:
+                    python_used = True
+                else:
+                    sympy_used = True
+            if 'rightSideOfEqual_use_sympy_or_llm' in step_info2:
+                if 'sympy and llm' in step_info2['rightSideOfEqual_use_sympy_or_llm']:
+                    python_used = True
+                else:
+                    sympy_used = True
+            
+            history2 += f"{step_key2}: {step_info2['content']}\n"
+
+        # 处理完毕后，将数据追加到新文件
+        append_jsonl(entry2, output_file_path)
+        
+        if all_correct:
+            all_correct_json_count += 1
+        if sympy_used:
+            sympy_count += 1
+        if python_used:
+            python_code_count += 1
+    
     return {
         'correct_judgments': correct_judgments,
         'all_correct_json_count': all_correct_json_count,
@@ -105,23 +227,34 @@ def analyze_data(json_data):
         'total_entries': total_entries
     }
 
+def print_statistics(stats):
+    """打印统计信息为表格形式，并格式化为百分比。"""
+    print(stats)
+    # 准备数据
+    data = [
+        ["计算步骤正确性准确率", f"{stats['correct_judgments']['JudgmentStepCalculatedCorrectly'] / stats['correct_judgments']['total_steps'] * 100:.2f}%"],
+        ["推理步骤正确性准确率", f"{stats['correct_judgments']['JudgmentStepReasoningCorrectly'] / stats['correct_judgments']['total_steps'] * 100:.2f}%"],
+        ["全部正确的JSON占比    ", f"{stats['all_correct_json_count'] / stats['total_entries'] * 100:.2f}%"],
+        ["使用SymPy的占比           ", f"{stats['sympy_count'] / stats['total_entries'] * 100:.2f}%"],
+        ["使用Python编程的占比  ", f"{stats['python_code_count'] / stats['total_entries'] * 100:.2f}%"]
+    ]
+    
+    # 使用 tabulate 打印表格
+    headers = ["统计指标                ", "值"]
+    table = tabulate(data, headers, tablefmt="grid")
+    print(table)
+
 def main():
     # 根据需要修改文件路径
-    file_path = 'your_file.jsonl'
-    json_data = read_jsonl(file_path)
-    stats = analyze_data(json_data)
+    input_file_path  = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-100.jsonl'
+    output_file_path = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Check2Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-100.jsonl'
+    
+    processed_data = read_processed_jsonl(output_file_path)
+    json_data = read_jsonl(input_file_path)
+    stats = analyze_data(json_data, processed_data, output_file_path)
     
     # 打印统计信息
-    print("计算步骤正确性准确率:", 
-          stats['correct_judgments']['JudgmentStepCalculatedCorrectly'] / stats['correct_judgments']['total_steps'])
-    print("推理步骤正确性准确率:", 
-          stats['correct_judgments']['JudgmentStepReasoningCorrectly'] / stats['correct_judgments']['total_steps'])
-    print("全部正确的JSON占比:", 
-          stats['all_correct_json_count'] / stats['total_entries'])
-    print("使用SymPy的占比:", 
-          stats['sympy_count'] / stats['total_entries'])
-    print("使用Python编程的占比:", 
-          stats['python_code_count'] / stats['total_entries'])
+    print_statistics(stats)
 
 if __name__ == "__main__":
     main()
