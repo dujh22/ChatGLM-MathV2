@@ -1,7 +1,6 @@
 import json
 import os
 from tqdm import tqdm
-from tabulate import tabulate
 from Step4_JudgmentStepReasoningCorrectly import replace_calculated_result
 
 from chatglm import ChatGLM
@@ -42,7 +41,7 @@ def analyze_data(json_data, processed_json_data, output_file_path):
     """分析JSON对象列表，计算所需的统计数据。"""
     processed_ids = {entry['id'] for entry in processed_json_data}  # 创建一个包含所有已处理ID的集合
 
-    json_data = json_data[:5]
+    json_data = json_data[:10]
     total_entries = len(json_data)  # 总的JSON对象数
     all_correct_json_count = 0  # 所有正确标注的JSON对象数
     sympy_count = 0  # 使用SymPy的次数
@@ -227,22 +226,33 @@ def analyze_data(json_data, processed_json_data, output_file_path):
         'total_entries': total_entries
     }
 
+def get_display_width(text):
+    """计算字符串的显示宽度，中文字符计为2，英文字符计为1"""
+    width = 0
+    for char in text:
+        if '\u4e00' <= char <= '\u9fff':
+            width += 2  # 假设中文字符宽度为2
+        else:
+            width += 1
+    return width
+
+def print_padded_line(label, value, total_width=40):
+    """打印填充后的行，保证右侧对齐"""
+    label_width = get_display_width(label)
+    spaces = ' ' * (total_width - label_width - len(value))
+    print(f"{label}{spaces}{value}")
+
 def print_statistics(stats):
-    """打印统计信息为表格形式，并格式化为百分比。"""
-    print(stats)
-    # 准备数据
-    data = [
-        ["计算步骤正确性准确率", f"{stats['correct_judgments']['JudgmentStepCalculatedCorrectly'] / stats['correct_judgments']['total_steps'] * 100:.2f}%"],
-        ["推理步骤正确性准确率", f"{stats['correct_judgments']['JudgmentStepReasoningCorrectly'] / stats['correct_judgments']['total_steps'] * 100:.2f}%"],
-        ["全部正确的JSON占比    ", f"{stats['all_correct_json_count'] / stats['total_entries'] * 100:.2f}%"],
-        ["使用SymPy的占比           ", f"{stats['sympy_count'] / stats['total_entries'] * 100:.2f}%"],
-        ["使用Python编程的占比  ", f"{stats['python_code_count'] / stats['total_entries'] * 100:.2f}%"]
-    ]
-    
-    # 使用 tabulate 打印表格
-    headers = ["统计指标                ", "值"]
-    table = tabulate(data, headers, tablefmt="grid")
-    print(table)
+    """打印统计信息为表格形式，并格式化为固定宽度的列，使用print函数，并考虑字符宽度。"""
+    print_padded_line("统计指标", "值")
+    print('-' * 40)  # 根据总宽度调整分隔线长度
+
+    # 打印数据行
+    print_padded_line("计算步骤正确性准确率", f"{stats['correct_judgments']['JudgmentStepCalculatedCorrectly'] / stats['correct_judgments']['total_steps'] * 100:.2f}%")
+    print_padded_line("推理步骤正确性准确率", f"{stats['correct_judgments']['JudgmentStepReasoningCorrectly'] / stats['correct_judgments']['total_steps'] * 100:.2f}%")
+    print_padded_line("全部正确的JSON占比", f"{stats['all_correct_json_count'] / stats['total_entries'] * 100:.2f}%")
+    print_padded_line("使用SymPy的占比", f"{stats['sympy_count'] / stats['total_entries'] * 100:.2f}%")
+    print_padded_line("使用Python编程的占比", f"{stats['python_code_count'] / stats['total_entries'] * 100:.2f}%")
 
 def main():
     # 根据需要修改文件路径

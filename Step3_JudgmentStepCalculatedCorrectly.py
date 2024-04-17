@@ -6,6 +6,7 @@ import re
 from get_data_for_codeTest import get_data_for_codeTest
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
+from Step4_JudgmentStepReasoningCorrectly import replace_calculated_result
 from Check1_JsonlVisualization import Check1_JsonlVisualization
 # from use_gpt_api_for_glm_generate import gpt_generate
 
@@ -81,8 +82,8 @@ def formula_preprocessing(input_str):
 
     return input_str
 
-
-def get_llm_calculate_result(input_str):
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!这里没写完：question, content, history
+def get_llm_calculate_result(input_str, question, content, history):
     # prompt = f"""根据给定的描述生成可执行的Python代码用于计算。描述如下：“${input_str}” 请编写一个Python代码片段来计算，并打印结果。注意只返回python代码即可"""
     prompt = f"""Generate executable Python code for computation based on the given description. The description is as follows: "${input_str}". Please write a Python code snippet to perform the calculation and print the result. Note that only the Python code should be returned."""
     for i in range(10):
@@ -99,7 +100,7 @@ def get_llm_calculate_result(input_str):
             answer = "Python scripts not running" # "python脚本无法运行"
     return answer, code
 
-def get_sympy_calculate_result(input_str):
+def get_sympy_calculate_result(input_str, question, content, history):
     use_sympy_or_llm = 'sympy'
     intermediate_process = input_str
     input_str = formula_preprocessing(input_str) # 公式预处理，采用规则库
@@ -139,8 +140,8 @@ def get_sympy_calculate_result(input_str):
             logging.error(f"incalculable << {input_str} >>: {str(e)}, and the simplified expression is << {simplified_expr} >>")
             # actual_result = simplified_expr
             use_sympy_or_llm = 'sympy and llm'
-            actual_result_temp, code = get_llm_calculate_result(simplified_expr)
-            actual_result = formula_preprocessing(actual_result_temp)
+            actual_result_temp, code = get_llm_calculate_result(simplified_expr, question, content, history)
+            actual_result = formula_preprocessing(actual_result_temp) # 结果预处理，采用规则库
             if actual_result != actual_result_temp:
                 intermediate_process = intermediate_process + "\n\n Code simplifued:" + actual_result_temp + "=>" + actual_result
             return actual_result, use_sympy_or_llm, intermediate_process, code
@@ -149,14 +150,14 @@ def get_sympy_calculate_result(input_str):
         simplified_expr = input_str
         # actual_result = simplified_expr
         use_sympy_or_llm = 'sympy and llm'
-        actual_result_temp, code = get_llm_calculate_result(simplified_expr)
-        actual_result = formula_preprocessing(actual_result_temp)
+        actual_result_temp, code = get_llm_calculate_result(simplified_expr, question, content, history)
+        actual_result = formula_preprocessing(actual_result_temp) # 结果预处理，采用规则库
         if actual_result != actual_result_temp:
             intermediate_process = intermediate_process + "\n\n Code simplifued:" + actual_result_temp + "=>" + actual_result
      
     return actual_result, use_sympy_or_llm, intermediate_process, code
 
-def check_calculation(info):
+def check_calculation(info, question, history):
     input_str = info['content']
     info['equation'] = []
     info['leftSideOfEqualSign'] = []
@@ -196,8 +197,8 @@ def check_calculation(info):
         info['equation'].append(f"{expr}={expected_result}")
 
         # 使用 sympy 计算表达式的结果
-        actual_result, use_sympy_or_llm1, intermediate_process1, code1 = get_sympy_calculate_result(expr)
-        expected_result, use_sympy_or_llm2, intermediate_process2, code2 = get_sympy_calculate_result(expected_result)
+        actual_result, use_sympy_or_llm1, intermediate_process1, code1 = get_sympy_calculate_result(expr, question, input_str, history)
+        expected_result, use_sympy_or_llm2, intermediate_process2, code2 = get_sympy_calculate_result(expected_result, question, input_str, history)
     
         info['leftSideOfEqualSign'].append(intermediate_process1)
         info['rightSideOfEqualSign'].append(intermediate_process2)
@@ -221,10 +222,17 @@ def process_jsonl_file(source_path, dest_path):
         for line in tqdm(src_file, desc='Processing'):
             data = json.loads(line)
             # 遍历每一步的解决方案
+            question = data['questions']
+            history = ""
             if 'solution' in data:
                 for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
                     # 判断并添加新键
-                    check_calculation(info)
+                    check_calculation(info, question, history)
+                    if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
+                        # 找到info["content"]中错误的部分进行替换
+                        # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
+                        temp_content = replace_calculated_result(info["content"], info["equation"], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
+                    history += f"{step}: {temp_content}\n"
             # 将修改后的数据写回新的JSONL文件
             json.dump(data, dest_file, ensure_ascii=False)
             dest_file.write('\n')

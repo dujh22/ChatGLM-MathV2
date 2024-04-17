@@ -1,30 +1,38 @@
-import re
+def get_display_width(text):
+    """计算字符串的显示宽度，中文字符计为2，英文字符计为1"""
+    width = 0
+    for char in text:
+        if '\u4e00' <= char <= '\u9fff':
+            width += 2  # 假设中文字符宽度为2
+        else:
+            width += 1
+    return width
 
-def replace_calculated_result(content, equations, judge, result):
-    for i, equation in enumerate(equations):
-        if judge[i] == 0:  # 需要修改的等式
-            # 分解等式，获取左侧变量和原始结果
-            variable, original_result = equation.split('=')
-            variable = variable.strip()
-            original_result = original_result.strip()
-            
-            # 构造用于搜索和替换的正则表达式
-            search_pattern = re.escape(variable) + r'\s*=\s*' + re.escape(original_result)
-            replace_pattern = f'{variable} = {result[i]}'
-            
-            # 替换等式
-            content = re.sub(search_pattern, replace_pattern, content)
-            
-            # 替换全文中的原结果
-            content = re.sub(r'\b' + re.escape(original_result) + r'\b', result[i], content)
-    
-    return content
+def print_padded_line(label, value, total_width=40):
+    """打印填充后的行，保证右侧对齐"""
+    label_width = get_display_width(label)
+    spaces = ' ' * (total_width - label_width - len(value))
+    print(f"{label}{spaces}{value}")
 
-content = "TAustin reaches the ground floor 60 seconds later because 9 + 1 = <<9+1=10>>10 seconds to reach the elevator + 60 seconds in the elevator = <<10+60=70>>70 seconds to reach the ground."
-equations = ['9+1=10', '10+60=70']
-judge = [0, 1]  # 只替换a的结果
-result = ['10.0000000000000', '70.0000000000000']
-  # 将a的结果替换为5，b的结果不变（虽然这里b不需要替换）
+def print_statistics(stats):
+    """打印统计信息为表格形式，并格式化为固定宽度的列，使用print函数，并考虑字符宽度。"""
+    print_padded_line("统计指标", "值")
+    print('-' * 40)  # 根据总宽度调整分隔线长度
 
-updated_content = replace_calculated_result(content, equations, judge, result)
-print(updated_content)
+    # 打印数据行
+    print_padded_line("计算步骤正确性准确率", f"{stats['correct_judgments']['JudgmentStepCalculatedCorrectly'] / stats['correct_judgments']['total_steps'] * 100:.2f}%")
+    print_padded_line("推理步骤正确性准确率", f"{stats['correct_judgments']['JudgmentStepReasoningCorrectly'] / stats['correct_judgments']['total_steps'] * 100:.2f}%")
+    print_padded_line("全部正确的JSON占比", f"{stats['all_correct_json_count'] / stats['total_entries'] * 100:.2f}%")
+    print_padded_line("使用SymPy的占比", f"{stats['sympy_count'] / stats['total_entries'] * 100:.2f}%")
+    print_padded_line("使用Python编程的占比", f"{stats['python_code_count'] / stats['total_entries'] * 100:.2f}%")
+
+# 示例统计数据，仅为展示使用
+stats = {
+    'correct_judgments': {'JudgmentStepCalculatedCorrectly': 95, 'JudgmentStepReasoningCorrectly': 90, 'total_steps': 100},
+    'all_correct_json_count': 80,
+    'sympy_count': 50,
+    'python_code_count': 30,
+    'total_entries': 100
+}
+
+print_statistics(stats)

@@ -1,3 +1,2 @@
 sympy
 termcolor
-tabulate
