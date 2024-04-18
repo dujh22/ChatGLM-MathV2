@@ -40,7 +40,7 @@ def check_reasoning(per_step, content, question, history):
             response_first_sentence = response.split(".")[0]
 
             if response_first_sentence[:3].lower() == "yes" or ("correct" in response_first_sentence.lower() and "incorrect" not in response_first_sentence.lower()):  
-                return 1, content
+                return 1, response
             else:
                 return 0, response
         except Exception as e:

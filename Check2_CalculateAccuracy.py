@@ -39,7 +39,7 @@ def analyze_data(json_data, processed_json_data, output_file_path):
     """分析JSON对象列表，计算所需的统计数据。"""
     processed_ids = {entry['id'] for entry in processed_json_data}  # 创建一个包含所有已处理ID的集合
 
-    json_data = json_data[:10]
+    json_data = json_data[:20]
     total_entries = len(json_data)  # 总的JSON对象数
     all_correct_json_count = 0  # 所有正确标注的JSON对象数
     sympy_count = 0  # 使用SymPy的次数
@@ -258,16 +258,9 @@ def print_statistics(stats):
 
 def Check2_CalculateAccuracy(input_file_path):
     # 根据需要修改文件路径
-    # 分解路径为目录和文件名
-    directory, filename = os.path.split(input_file_path)
+
     # 检查filename中"Step"的位置并插入"Check2"
-    parts = filename.split('_')
-    for i, part in enumerate(parts):
-        if "Step" in part:
-            parts[i] = 'Check2' + part  # 在"Step"前添加"Check2"
-            break
-    # 重新组合为新的文件名
-    output_file_path = '_'.join(parts)
+    output_file_path = input_file_path.replace("Step4", "Check2Step4")
     
     processed_data = read_processed_jsonl(output_file_path)
     json_data = read_jsonl(input_file_path)
@@ -281,4 +274,4 @@ def main():
     Check2_CalculateAccuracy(input_file_path)
 
 if __name__ == "__main__":
-    Check2_CalculateAccuracy()
+    main()
