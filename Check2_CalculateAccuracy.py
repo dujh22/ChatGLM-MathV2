@@ -1,10 +1,8 @@
 import json
 import os
+import re
 from tqdm import tqdm
-from Step4_JudgmentStepReasoningCorrectly import replace_calculated_result
-
-from chatglm import ChatGLM
-ChatGLM = ChatGLM()
+from Step4_JudgmentStepReasoningCorrectly import replace_calculated_result, llm_response
 
 def read_jsonl(file_path):
     """读取JSONL文件，返回一个包含多个JSON对象的列表，并为每个对象添加一个唯一的索引作为ID。"""
@@ -148,10 +146,12 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                 # prompt1 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步计算是错误的，应该修改为：{temp_content2} 请问我的判断和修改是否正确？\n\n（是/否）"""
                 prompt1 = f"""I'm trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think this step is calculated incorrectly and should be modified as: {temp_content2} Am I correct in my judgment and modification? \n\n (yes/no)"""
 
-            try:
-                response1 = ChatGLM.generate(prompt1)
-            except:
-                response1 = "no llm judge"
+            for i in range(10):
+                try:
+                    response1 = llm_response(prompt1, use_glm_or_gpt='gpt')
+                    break
+                except:
+                    response1 = "no llm judge"
             step_info2['LLMJudgmentStepCalculatedCorrectly'] = response1  # 更新entry
 
             if response1 == "no llm judge":
@@ -177,10 +177,12 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                 # prompt2 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步的推理是错误的，应该修改为：{step_info2['StepReasoningCorrectlyResult']}。\n\n 请问我的判断是否正确？（是/否）"""
                 prompt2 = f"""I'm trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the reasoning in this step is wrong and should be changed to: {step_info2['StepReasoningCorrectlyResult']}. \n\n Is my judgment correct? (Yes/No)"""
             
-            try:
-                response2 = ChatGLM.generate(prompt2)
-            except:
-                response2 = "no llm judge"
+            for i in range(10):
+                try:
+                    response2 = llm_response(prompt2, use_glm_or_gpt='gpt')
+                    break
+                except:
+                    response2 = "no llm judge"
             step_info2['LLMJudgmentStepReasoningCorrectly'] = response2  # 更新entry
 
             if response2 == "no llm judge":
@@ -254,10 +256,18 @@ def print_statistics(stats):
     print_padded_line("使用SymPy的占比", f"{stats['sympy_count'] / stats['total_entries'] * 100:.2f}%")
     print_padded_line("使用Python编程的占比", f"{stats['python_code_count'] / stats['total_entries'] * 100:.2f}%")
 
-def main():
+def Check2_CalculateAccuracy(input_file_path):
     # 根据需要修改文件路径
-    input_file_path  = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-100.jsonl'
-    output_file_path = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Check2Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-100.jsonl'
+    # 分解路径为目录和文件名
+    directory, filename = os.path.split(input_file_path)
+    # 检查filename中"Step"的位置并插入"Check2"
+    parts = filename.split('_')
+    for i, part in enumerate(parts):
+        if "Step" in part:
+            parts[i] = 'Check2' + part  # 在"Step"前添加"Check2"
+            break
+    # 重新组合为新的文件名
+    output_file_path = '_'.join(parts)
     
     processed_data = read_processed_jsonl(output_file_path)
     json_data = read_jsonl(input_file_path)
@@ -266,5 +276,9 @@ def main():
     # 打印统计信息
     print_statistics(stats)
 
+def main():
+    input_file_path  = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-100.jsonl'
+    Check2_CalculateAccuracy(input_file_path)
+
 if __name__ == "__main__":
-    main()
+    Check2_CalculateAccuracy()

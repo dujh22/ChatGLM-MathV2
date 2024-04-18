@@ -6,9 +6,7 @@ import re
 from get_data_for_codeTest import get_data_for_codeTest
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
-from Step4_JudgmentStepReasoningCorrectly import replace_calculated_result
 from Check1_JsonlVisualization import Check1_JsonlVisualization
-# from use_gpt_api_for_glm_generate import gpt_generate
 
 from run_python_func import run_python
 from tqdm import tqdm
@@ -18,11 +16,48 @@ import concurrent.futures
 import time
 import logging
 
+from use_gpt_api_for_glm_generate import gpt_generate
 from chatglm import ChatGLM
 ChatGLM = ChatGLM()
 
+# 这里设置使用的llm进行生成，注意在本项目中只有这里一个地方进行相关设置
+def llm_response(prompt, use_glm_or_gpt = 'glm'):
+    if use_glm_or_gpt == 'glm':
+        response = ChatGLM.generate(prompt)
+    else:
+        response = gpt_generate(prompt)
+    return response
+
 # 配置日志记录器
 logging.basicConfig(filename='Step3_JudgmentStepCalculatedCorrectly.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# 修正函数
+# 1.在 content 字符串中查找被 << 和 >> 包围的表达式。
+# 2.替换 = 后面直到 >> 的内容为 StepCalculatedCorrectlyResult 的值。
+# 3.如果 >> 后的内容（如果存在）与 = 和 >> 之间的内容相同，则也将其替换为 StepCalculatedCorrectlyResult。
+# content = "The equation a = 2 results in a = 2, and then we see b = 3, which leads to b = 3."
+# equations = ["a = 2", "b = 3"]
+# judge = [0, 1]  # 只替换a的结果
+# result = ["5", "4"]  # 将a的结果替换为5，b的结果不变（虽然这里b不需要替换）
+def replace_calculated_result(content, equations, judge, result):
+    for i, equation in enumerate(equations):
+        if judge[i] == 0:  # 需要修改的等式
+            # 分解等式，获取左侧变量和原始结果
+            variable, original_result = equation.split('=')
+            variable = variable.strip()
+            original_result = original_result.strip()
+            
+            # 构造用于搜索和替换的正则表达式
+            search_pattern = re.escape(variable) + r'\s*=\s*' + re.escape(original_result)
+            replace_pattern = f'{variable} = {result[i]}'
+            
+            # 替换等式
+            content = re.sub(search_pattern, replace_pattern, content)
+            
+            # 替换全文中的原结果
+            content = re.sub(r'\b' + re.escape(original_result) + r'\b', result[i], content)
+    
+    return content
 
 # 公式预处理
 def formula_preprocessing(input_str):
@@ -82,23 +117,26 @@ def formula_preprocessing(input_str):
 
     return input_str
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!这里没写完：question, content, history
+def extract_glm_code(text):
+    # 使用正则表达式提取代码块
+    match = re.search(r"```python\n(.*?)\n```", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return ""  # 如果没有找到匹配项，返回空字符串
+
 def get_llm_calculate_result(input_str, question, content, history):
-    # prompt = f"""根据给定的描述生成可执行的Python代码用于计算。描述如下：“${input_str}” 请编写一个Python代码片段来计算，并打印结果。注意只返回python代码即可"""
-    prompt = f"""Generate executable Python code for computation based on the given description. The description is as follows: "${input_str}". Please write a Python code snippet to perform the calculation and print the result. Note that only the Python code should be returned."""
-    for i in range(10):
-        code = ""
-        # code = gpt_generate(prompt)
-        code = ChatGLM.generate(prompt)
-        # 截取掉无用的部分
-        # 这里的逻辑删去了
-        # print(code)
+    # 构建给语言模型的提示
+    # prompt = f"""我正在尝试解决一个数下问题，具体问题是：{question}。\n\n 我目前采用的解题步骤如下：{history}。\n\n 现在我正在计算的步骤是：{content}。\n\n 我需要计算一个数学表达式，这个表达式是：{input_str}。请帮我生成可执行的Python代码用于计算这个表达式，注意代码的最终输出应该是这个表达式的值或者化简后的表达式"""
+    prompt = f"""I'm trying to solve a number down problem with the following specific question:{question} \n\n The steps I am currently using to solve the problem are: {history}. \n\n The step I am currently calculating is: {content}. \n\n I need to compute a math expression which is: {input_str}. Please help me generate executable Python code for calculating this expression, noting that the final output of the code should be either the value of this expression or the simplified expression."""
+    for i in range(10):  # 尝试最多10次以获取有效的代码响应
+        # 使用ChatGLM模型生成代码
+        response = llm_response(prompt)
+        # print("response:", response)
+        code = extract_glm_code(response) # 假设响应即为代码
         stdout, stderr = run_python(code)
-        if stderr == "":
+        if not stderr:  # 如果没有错误，返回结果
             return stdout, code
-        else:
-            answer = "Python scripts not running" # "python脚本无法运行"
-    return answer, code
+    return "Python scripts not running", ""  # 经过10次尝试失败后返回错误信息
 
 def get_sympy_calculate_result(input_str, question, content, history):
     use_sympy_or_llm = 'sympy'
@@ -228,6 +266,7 @@ def process_jsonl_file(source_path, dest_path):
                 for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
                     # 判断并添加新键
                     check_calculation(info, question, history)
+                    temp_content = info['content']
                     if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
                         # 找到info["content"]中错误的部分进行替换
                         # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
@@ -240,10 +279,17 @@ def process_jsonl_file(source_path, dest_path):
 # 并发处理
 def process_line(line):
     data = json.loads(line)
+    question = data['questions']
+    history = ""
     if 'solution' in data:
         for step, info in data['solution'].items():
-            # 此处假设 check_calculation 已正确实现
-            check_calculation(info)
+            check_calculation(info, question, history)
+            temp_content = info['content']
+            if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
+                # 找到info["content"]中错误的部分进行替换
+                # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
+                temp_content = replace_calculated_result(info["content"], info["equation"], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
+            history += f"{step}: {temp_content}\n"
     # 将处理后的数据转换为字符串以便写入文件
     return json.dumps(data, ensure_ascii=False) + '\n'
 
@@ -283,8 +329,11 @@ def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder):
             print("正在处理文件:", source_path)
             dest_path = os.path.join(target_folder, filename)
             # process_jsonl_file(source_path, dest_path)
+            # 并行处理
             process_jsonl_file_concurrent(source_path, dest_path)
-            Check1_JsonlVisualization(dest_path)
+
+            # 可视化结果输出，用于debug
+            Check1_JsonlVisualization(dest_path) 
 # 使用方法：
 def main():
     code_test_state = True
@@ -295,7 +344,7 @@ def main():
     mid_name = base_folder + '//data//' + dataset_name
 
     if code_test_state:
-        get_data_for_codeTest(source_folder, new_folder_suffix='_for_codeTest', num_points=10)
+        # get_data_for_codeTest(source_folder, new_folder_suffix='_for_codeTest', num_points=10)
         source_folder = source_folder + "_for_codeTest"
 
         target_folder1 = mid_name + "_for_codeTest" + "_Step1_SplitByRow_forMathShepherd"
@@ -306,8 +355,8 @@ def main():
         target_folder2 = mid_name + "_Step2_IsCalculationOrReasoning"
         target_folder3 = mid_name + "_Step3_JudgmentStepCalculatedCorrectly"
 
-    Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
-    Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
+    # Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
+    # Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
     Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
 
     

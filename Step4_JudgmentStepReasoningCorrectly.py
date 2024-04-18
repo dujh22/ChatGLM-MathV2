@@ -9,74 +9,43 @@ from tqdm import tqdm
 from get_data_for_codeTest import get_data_for_codeTest
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
-from Step3_JudgmentStepCalculatedCorrectly import Step3_JudgmentStepCalculatedCorrectly
+from Step3_JudgmentStepCalculatedCorrectly import Step3_JudgmentStepCalculatedCorrectly, replace_calculated_result, llm_response
 from Check1_JsonlVisualization import Check1_JsonlVisualization
-
-# from use_gpt_api_for_glm_generate import gpt_generate
-
-from chatglm import ChatGLM
-ChatGLM = ChatGLM()
-
-# 修正函数
-# 1.在 content 字符串中查找被 << 和 >> 包围的表达式。
-# 2.替换 = 后面直到 >> 的内容为 StepCalculatedCorrectlyResult 的值。
-# 3.如果 >> 后的内容（如果存在）与 = 和 >> 之间的内容相同，则也将其替换为 StepCalculatedCorrectlyResult。
-# content = "The equation a = 2 results in a = 2, and then we see b = 3, which leads to b = 3."
-# equations = ["a = 2", "b = 3"]
-# judge = [0, 1]  # 只替换a的结果
-# result = ["5", "4"]  # 将a的结果替换为5，b的结果不变（虽然这里b不需要替换）
-def replace_calculated_result(content, equations, judge, result):
-    for i, equation in enumerate(equations):
-        if judge[i] == 0:  # 需要修改的等式
-            # 分解等式，获取左侧变量和原始结果
-            variable, original_result = equation.split('=')
-            variable = variable.strip()
-            original_result = original_result.strip()
-            
-            # 构造用于搜索和替换的正则表达式
-            search_pattern = re.escape(variable) + r'\s*=\s*' + re.escape(original_result)
-            replace_pattern = f'{variable} = {result[i]}'
-            
-            # 替换等式
-            content = re.sub(search_pattern, replace_pattern, content)
-            
-            # 替换全文中的原结果
-            content = re.sub(r'\b' + re.escape(original_result) + r'\b', result[i], content)
-    
-    return content
+from Check2_CalculateAccuracy import Check2_CalculateAccuracy
 
 
 # 判断单步推理是否正确
 def check_reasoning(per_step, content, question, history):
-    try:
-        # 历史信息的构造
-        historys = ""
-        for step, info in history.items():
-            temp_content = info["content"]
-            if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
-                # 找到info["content"]中错误的部分进行替换
-                # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
-                temp_content = replace_calculated_result(temp_content, info["equation"], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
-            historys += f"{step}: {temp_content}\n"
-        promt = f"""我正在尝试解决一个数学问题，具体问题是：“{question}”。\n\n 我目前采用的解题步骤如下：“{historys}” \n\n 现在我正在推理的步骤是：“{per_step}”，具体推理内容是：“{content}”。\n\n 请评估我的推理过程。如果我目前的推理步骤正确并且与问题相关，请回答“yes”。如果推理步骤错误或者不相关，请指出问题所在，并提供正确或更相关的推理步骤。"""
-        prompt = f"""I am trying to solve a math problem, the specific question is: \"{question}\". \n\n The steps I have used so far to solve the problem are as follows: \"{historys}\" \n\n Now I am reasoning about the steps:\"{per_step}\" and the specific reasoning is:\"{content}\". \n\n Please evaluate my reasoning process. If my current reasoning steps are correct and relevant to the question, please answer "yes". If the reasoning steps are incorrect or irrelevant, please point out the problem and provide the correct or more relevant reasoning steps."""
-        
-        # response = gpt_generate(prompt)
-        response = ChatGLM.generate(prompt)  # 调用生成方法
-        
-        # 提取 response 的前三个字符，并将它们转换成小写来进行判断。
-        # 注意也有可能是response中第一句话里面存在correct但不存在incorrect，所以需要加上or ()
-        
-        # 获取response的第一句话或者如果没有符号就是完整的response
-        response_first_sentence = response.split(".")[0]
+    for i in range(10):
+        try:
+            # 历史信息的构造
+            historys = ""
+            for step, info in history.items():
+                temp_content = info["content"]
+                if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
+                    # 找到info["content"]中错误的部分进行替换
+                    # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
+                    temp_content = replace_calculated_result(temp_content, info["equation"], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
+                historys += f"{step}: {temp_content}\n"
+            promt = f"""我正在尝试解决一个数学问题，具体问题是：“{question}”。\n\n 我目前采用的解题步骤如下：“{historys}” \n\n 现在我正在推理的步骤是：“{per_step}”，具体推理内容是：“{content}”。\n\n 请评估我的推理过程。如果我目前的推理步骤正确并且与问题相关，请回答“yes”。如果推理步骤错误或者不相关，请指出问题所在，并提供正确或更相关的推理步骤。"""
+            prompt = f"""I am trying to solve a math problem, the specific question is: \"{question}\". \n\n The steps I have used so far to solve the problem are as follows: \"{historys}\" \n\n Now I am reasoning about the steps:\"{per_step}\" and the specific reasoning is:\"{content}\". \n\n Please evaluate my reasoning process. If my current reasoning steps are correct and relevant to the question, please answer "yes". If the reasoning steps are incorrect or irrelevant, please point out the problem and provide the correct or more relevant reasoning steps."""
+            
+            # response = gpt_generate(prompt)
+            response = llm_response(prompt)  # 调用生成方法
+            
+            # 提取 response 的前三个字符，并将它们转换成小写来进行判断。
+            # 注意也有可能是response中第一句话里面存在correct但不存在incorrect，所以需要加上or ()
+            
+            # 获取response的第一句话或者如果没有符号就是完整的response
+            response_first_sentence = response.split(".")[0]
 
-        if response_first_sentence[:3].lower() == "yes" or ("correct" in response_first_sentence.lower() and "incorrect" not in response_first_sentence.lower()):  
-            return 1, content
-        else:
-            return 0, response
-    except Exception as e:
-        print(e)
-        return 0, "Error"
+            if response_first_sentence[:3].lower() == "yes" or ("correct" in response_first_sentence.lower() and "incorrect" not in response_first_sentence.lower()):  
+                return 1, content
+            else:
+                return 0, response
+        except Exception as e:
+            print(e)
+    return 0, "Error"
 
 # 串行处理
 def process_jsonl_file(source_path, dest_path):
@@ -166,7 +135,12 @@ def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, star
             with open(save_file_name, 'w', encoding='utf-8') as f:
                     f.writelines(results)
             print(f"Data saved to {save_file_name}")
+            
+            # 可视化结果输出，用于debug
             Check1_JsonlVisualization(save_file_name)
+
+            # 计算acc
+            Check2_CalculateAccuracy(save_file_name)
 
 def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
     
@@ -208,9 +182,9 @@ def main():
         target_folder3 = mid_name + "_Step3_JudgmentStepCalculatedCorrectly"
         target_folder4 = mid_name + "_Step4_JudgmentStepReasoningCorrectly"
 
-    #Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
-    #Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
-    #Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
+    Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
+    Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
+    Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
     Step4_JudgmentStepReasoningCorrectly(target_folder3, target_folder4)
 
    

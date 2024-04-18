@@ -15,7 +15,9 @@ def gpt_generate(prompt):
     messages = [{"role": "user", "content": prompt}]
 
     # 调用GPT接口
-    chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages = messages)
+    # model = "gpt-3.5-turbo"
+    model = "gpt-4-1106-preview"
+    chat_completion = openai.ChatCompletion.create(model=model, messages = messages)
     gpt_response = chat_completion.choices[0].message.content
     return gpt_response
 
