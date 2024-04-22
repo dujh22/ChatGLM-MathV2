@@ -1,8 +1,7 @@
 import json
 import os
-import re
 from tqdm import tqdm
-from Step4_JudgmentStepReasoningCorrectly import replace_calculated_result, llm_response
+from Step3_JudgmentStepCalculatedCorrectly import replace_calculated_result, llm_response
 
 def read_jsonl(file_path):
     """读取JSONL文件，返回一个包含多个JSON对象的列表，并为每个对象添加一个唯一的索引作为ID。"""
@@ -39,82 +38,111 @@ def analyze_data(json_data, processed_json_data, output_file_path):
     """分析JSON对象列表，计算所需的统计数据。"""
     processed_ids = {entry['id'] for entry in processed_json_data}  # 创建一个包含所有已处理ID的集合
 
-    json_data = json_data[:20]
+    # json_data = json_data[:20]
     total_entries = len(json_data)  # 总的JSON对象数
-    all_correct_json_count = 0  # 所有正确标注的JSON对象数
+    
+
     sympy_count = 0  # 使用SymPy的次数
     python_code_count = 0  # 使用Python编程的次数
     
     # 用于存储正确判断的次数
-    correct_judgments = {
+    correct_judgments_by_case = {
         'JudgmentStepCalculatedCorrectly': 0,
+        'JudgmentStepEquationCorrectly': 0,
         'JudgmentStepReasoningCorrectly': 0,
-        'total_steps': 0  # 总步骤数
+        'correct_cases': 0, # 正确样例数
+        'total_cases': 0,  # 总样例数
+        'sympy_count':0,  # 使用SymPy的次数
+        'python_code_count':0  # 使用Python编程的次数
+    }
+    correct_judgments_by_step = {
+        'JudgmentStepCalculatedCorrectly': 0,
+        'JudgmentStepEquationCorrectly': 0,
+        'JudgmentStepReasoningCorrectly': 0,
+        'correct_steps': 0, # 正确样例数
+        'total_steps': 0,  # 总样例数
+        'sympy_count':0,  # 使用SymPy的次数
+        'python_code_count':0  # 使用Python编程的次数
     }
 
-    # for entry in processed_json_data:
+    # 针对已经处理过的样本点:
     for entry in tqdm(processed_json_data, desc='Processing'):
-        all_correct = True
-        sympy_used = False
-        python_used = False
+        correct_judgments_by_case['total_cases'] += 1
         
-        history = ""
+        total_correct = True
+        total_calculate_correct = True
+        total_equation_correct = True
+        total_reasoning_correct = True
+        total_python_used = False
+        total_sympy_used = False       
+
         for step_key, step_info in entry['solution'].items():
+            python_used = False
+            sympy_used = False
             # 计算总步骤数
-            correct_judgments['total_steps'] += 1
+            correct_judgments_by_step['total_steps'] += 1
             
             # 检查每种判断类型
-
-            # 检测针对计算步骤的判断是否正确
-            response1 = step_info['LLMJudgmentStepCalculatedCorrectly']
-        
-            if response1 == "no llm judge":
-                print(response1)
-            else:
+            if step_info['is_calculation_or_reasoning'] == 1:
+                # 检测针对计算步骤的判断是否正确
+                response1 = step_info['LLMJudgmentStepCalculatedCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
                 response1_first_sentence = response1.split(".")[0]
-
-                if response1_first_sentence[:3].lower() == "yes" or ("correct" in response1_first_sentence.lower() and "incorrect" not in response1_first_sentence.lower()):  # 如果计算正确
-                    correct_judgments['JudgmentStepCalculatedCorrectly'] += 1
+                if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
+                    correct_judgments_by_step['JudgmentStepCalculatedCorrectly'] += 1
                 else:
-                    all_correct = False
-
-            
-            # 检测针对推理步骤的判断是否正确
-            response2 = step_info['LLMJudgmentStepReasoningCorrectly']
-
-            if response2 == "no llm judge":
-                print(response2)
+                    total_calculate_correct = False
+                # 检测针对计算公式的判断是否正确
+                response1 = step_info['LLMJudgmentStepEquationCorrectly']
+                # 获取response的第一句话或者如果没有符号就是完整的response
+                response1_first_sentence = response1.split(".")[0]
+                if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
+                    correct_judgments_by_step['JudgmentStepEquationCorrectly'] += 1
+                else:
+                    total_equation_correct = False
             else:
+                # 检测针对推理步骤的判断是否正确
+                response2 = step_info['LLMJudgmentStepReasoningCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
                 response2_first_sentence = response2.split(".")[0]
-
-                if response2_first_sentence[:3].lower() == "yes" or ("correct" in response2_first_sentence.lower() and "incorrect" not in response2_first_sentence.lower()):  # 如果推理正确
-                    correct_judgments['JudgmentStepReasoningCorrectly'] += 1
+                if response2_first_sentence[:3].lower() == "yes" or "yes" in response2_first_sentence.lower():  # 如果推理正确
+                    correct_judgments_by_step['JudgmentStepReasoningCorrectly'] += 1
                 else:
-                    all_correct = False
+                    total_reasoning_correct = False
             
             # 检查是否使用了SymPy或Python编程
-            if 'leftSideOfEqual_use_sympy_or_llm' in step_info:
-                if 'sympy and llm' in step_info['leftSideOfEqual_use_sympy_or_llm']:
-                    python_used = True
-                else:
-                    sympy_used = True
-            if 'rightSideOfEqual_use_sympy_or_llm' in step_info:
-                if 'sympy and llm' in step_info['rightSideOfEqual_use_sympy_or_llm']:
-                    python_used = True
-                else:
-                    sympy_used = True
             
-            history += f"{step_key}: {step_info['content']}\n"
+            if 'sympy and llm' in step_info['leftSideOfEqual_use_sympy_or_llm']:
+                python_used = True
+                total_python_used = True
+            else:
+                sympy_used = True
+                total_sympy_used = True
+            if 'sympy and llm' in step_info['rightSideOfEqual_use_sympy_or_llm']:
+                python_used = True
+            else:
+                sympy_used = True
         
-        if all_correct:
-            all_correct_json_count += 1
-        if sympy_used:
-            sympy_count += 1
-        if python_used:
-            python_code_count += 1
-    
+            if sympy_used:
+                correct_judgments_by_step['sympy_count'] += 1
+            if python_used:
+                correct_judgments_by_step['python_code_count'] += 1
+
+        if total_correct == True:
+            correct_judgments_by_case['correct_cases'] += 1
+        if total_calculate_correct == True:
+            correct_judgments_by_case['JudgmentStepCalculatedCorrectly'] += 1
+        if total_equation_correct == True:
+            correct_judgments_by_case['JudgmentStepEquationCorrectly'] += 1
+        if total_reasoning_correct == True:
+            correct_judgments_by_case['JudgmentStepReasoningCorrectly'] += 1
+        if total_python_used == True:
+            correct_judgments_by_case['python_code_count'] += 1
+        if total_sympy_used == True:
+            correct_judgments_by_case['sympy_count'] += 1
+
+
+
     # for entry in json_data:
     for entry2 in tqdm(json_data, desc='Processing'):
         if entry2['id'] in processed_ids:

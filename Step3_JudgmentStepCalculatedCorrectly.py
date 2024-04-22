@@ -15,6 +15,10 @@ from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 import time
 import logging
+# import hunter # 用于调试
+
+# hunter.trace(module=__name__)
+
 
 from use_gpt_api_for_glm_generate import gpt_generate
 from chatglm import ChatGLM
@@ -39,9 +43,13 @@ logging.basicConfig(filename='Step3_JudgmentStepCalculatedCorrectly.log', level=
 # equations = ["a = 2", "b = 3"]
 # judge = [0, 1]  # 只替换a的结果
 # result = ["5", "4"]  # 将a的结果替换为5，b的结果不变（虽然这里b不需要替换）
-def replace_calculated_result(content, equations, judge, result):
+def replace_calculated_result(content, equations, equations_need, equations_correct_format, judge, result):
+    # 这里会有两种情况
+    # 情况1：result[i]是正确的数值，那么直接进行错误数值的替换是没有问题的
+    # 情况2：result[i]是一个字符串，那么就不是直接替换，而是作为一个补充信息只能。因为不可能把所有的错误数值替换为一个相同的文字串
     for i, equation in enumerate(equations):
-        if judge[i] == 0:  # 需要修改的等式
+        if judge[i] == 0:  # 需要修改的等式            
+            # 等式本身是正确的了
             # 分解等式，获取左侧变量和原始结果
             variable, original_result = equation.split('=')
             variable = variable.strip()
@@ -56,11 +64,59 @@ def replace_calculated_result(content, equations, judge, result):
             
             # 替换全文中的原结果
             content = re.sub(r'\b' + re.escape(original_result) + r'\b', result[i], content)
-    
+
+            # 等式本身是不正确的，还需要修改等式本身
+            if equations_need[i] == 0:
+                if equations_correct_format[i] != "ERROR: LLM cannot correct the formula":
+                    content = content.replace(variable, str(equations_correct_format[i]))
+                else:
+                    temp_variable = variable + "(The formula may be wrong)"
+                    content = content.replace(variable, temp_variable)
+                
     return content
+
+# 删除公式中可能存在的单位
+def simplify_expression(expr):
+    import re
+    result = ""
+    i = 0
+    while i < len(expr):
+        if expr[i].isdigit() or expr[i] in "+-*/().":
+            # 如果是数字或者符号，则添加到结果中
+            result += expr[i]
+            i += 1
+        elif expr[i].isalpha():
+            # 如果是字母，则向后扫描直到遇到非字母
+            start = i
+            while i < len(expr) and expr[i].isalpha():
+                i += 1
+            if i == len(expr):
+                # 如果到达字符串末尾，则停止
+                break
+            elif expr[i] in "+-*/().":
+                # 如果字母后是符号，检查后续内容
+                if i + 1 < len(expr) and expr[i + 1].isalpha():
+                    # 如果符号后是字母，忽略之前的所有字母
+                    i += 1
+            elif expr[i].isdigit():
+                # 如果字母后是数字，忽略之前的所有字母
+                i += 1
+                continue
+        else:
+            # 其他情况，直接增加索引
+            i += 1
+
+    # 清理可能出现的连续符号错误，例如多个连续的乘除号
+    result = re.sub(r'\*+/', '*', result)
+    result = re.sub(r'/\*+', '/', result)
+
+    return result
 
 # 公式预处理
 def formula_preprocessing(input_str):
+    # 删除等号与等号右侧的内容
+    input_str = re.sub(r'=.+', '', input_str)
+
     # 删除货币符号
     input_str = input_str.replace('$', '')
 
@@ -118,6 +174,9 @@ def formula_preprocessing(input_str):
     # 重新处理可能由于删除字符串导致的多余空格
     input_str = re.sub(r'\s+', ' ', input_str).strip()
 
+    # 删除可能存在的单位
+    input_str = simplify_expression(input_str)
+
     return input_str
 
 def extract_glm_code(text):
@@ -131,6 +190,7 @@ def get_llm_calculate_result(input_str, question, content, history):
     # 构建给语言模型的提示
     # prompt = f"""我正在尝试解决一个数学问题，具体问题是：{question}。\n\n 我目前采用的解题步骤如下：{history}。\n\n 现在我正在计算的步骤是：{content}。\n\n 我需要计算一个数学表达式，这个表达式是：{input_str}。请帮我生成可执行的Python代码用于计算这个表达式，注意代码的最终输出应该是这个表达式的值或者化简后的表达式"""
     prompt = f"""I'm trying to solve a math problem with the following specific question:{question} \n\n The steps I am currently using to solve the problem are: {history}. \n\n The step I am currently calculating is: {content}. \n\n I need to compute a math expression which is: {input_str}. Please help me generate executable Python code for calculating this expression, noting that the final output of the code should be either the value of this expression or the simplified expression."""
+    response = ""
     for i in range(10):  # 尝试最多10次以获取有效的代码响应
         # 使用ChatGLM模型生成代码
         response = llm_response(prompt)
@@ -139,28 +199,46 @@ def get_llm_calculate_result(input_str, question, content, history):
         stdout, stderr = run_python(code)
         if not stderr:  # 如果没有错误，返回结果
             return stdout, code
-    return "Python scripts not running", ""  # 经过10次尝试失败后返回错误信息
+    return "ERROR: Python scripts not running", response  # 经过10次尝试失败后返回错误信息
 
 def judge_equation_need(expr, question, input_str, history):
     # 构建给语言模型的提示
-    # prompt = f"""我正在尝试解决一个数学问题，具体问题是：{question}。\n\n 我目前采用的解题步骤如下：{history}。\n\n 现在我正在计算的步骤是：{content}。\n\n 我需要计算一个数学表达式，这个表达式是：{expr}。请问这个表达式是否正确？（yes/no）\n\n 如果不正确，请帮我生成可执行的Python代码用于完成这一计算步骤，注意代码的最终输出应该是这个计算步骤正确的预期结果"""
-    prompt = f"""I am trying to solve a math problem, specifically the question: {question} \n\n The steps I am currently using to solve the problem are: {history}. \n\n The step I am calculating now is: {input_str}. \n\n I need to calculate a math expression which is: {expr}. Is this expression correct? (yes/no) \n\n If it is not correct, please help me generate executable Python code for completing this computation step, noting that the final output of the code should be the correct expected result of this computation step."""
+    # prompt = f"""我正在尝试解决一个数学问题，具体问题是：{question}。\n\n 我目前采用的解题步骤如下：{history}。\n\n 现在我正在计算的步骤是：{input_str}。\n\n 我需要计算一个数学表达式，这个表达式是：{expr}。请问这个表达式是否正确？（yes/no）\n\n 如果正确请只回答yes。 \n\n 如果不正确，请帮我修正这个表达式，并返回正确的表达式，用<<>>包围起来。"""
+    prompt = f"""I am attempting to solve a math problem with the specific question:{question} \n\n The steps I am currently using to solve the problem are: {history}. \n\n The step I am currently calculating is: {input_str}. \n\n I need to calculate a math expression which is: {expr}. Is this expression correct? (yes/no)\n\n If it is correct please answer yes only. \n\n If it is not correct, please help me to correct this expression and return the correct expression surrounded by <<>>."""
+    response = ""
     for i in range(10):  # 尝试最多10次以获取有效的代码响应
-        # 使用ChatGLM模型生成代码
+        # 使用ChatGLM模型生成结果
         response = llm_response(prompt)
         # 获取response的第一句话或者如果没有符号就是完整的response
         response_first_sentence = response.split(".")[0]
-        if response_first_sentence[:3].lower() == "yes" or ("correct" in response_first_sentence.lower() and "incorrect" not in response_first_sentence.lower()):  # 如果是一个正确的计算公式
-            return 1, expr, ""
+        if response_first_sentence[:3].lower() == "yes" or "yes" in response_first_sentence.lower():  # 如果是一个正确的计算公式
+            return 1, expr, response
         else:
-            code = extract_glm_code(response) # 假设响应即为代码
-            stdout, stderr = run_python(code)
-            if not stderr:  # 如果没有错误，返回结果
-                return 0, stdout, code
-    return 0, "Python scripts not running", ""  # 经过10次尝试失败后返回错误信息
+            # 尝试修正表达式
+            match = re.search(r'<<(.+?)>>', response)
+            if match:
+                return 0, match.group(1), response
+    return 0, "ERROR: LLM cannot correct the formula", response  # 经过10次尝试失败后返回错误信息
+
+# 删除小数后面多余的0
+def evaluate_and_simplify(expr):
+    # 计算表达式的数值结果
+    numerical_result = expr.evalf()
+    
+    # 检查结果是否非常接近某个整数
+    if numerical_result.is_Integer:
+        return int(numerical_result)  # 结果是整数
+    else:
+        # 尝试四舍五入看看是否能得到整数
+        rounded_result = round(numerical_result)
+        if abs(numerical_result - rounded_result) < 1e-10:
+            return int(rounded_result)  # 四舍五入后的整数
+        else:
+            return float(numerical_result)  # 保留为浮点数
 
 def get_sympy_calculate_result(input_str, question, content, history):
     use_sympy_or_llm = 'sympy'
+    temp_key = input_str
     intermediate_process = input_str
     input_str = formula_preprocessing(input_str) # 公式预处理，采用规则库
     if input_str != intermediate_process:
@@ -192,11 +270,13 @@ def get_sympy_calculate_result(input_str, question, content, history):
         try:
             # 如果是数学表达式，返回计算结果
             actual_result = simplified_expr.evalf()
+            # 删除后面可能存在的多余的0
+            actual_result = evaluate_and_simplify(actual_result)
             if str(actual_result) != str(simplified_expr):
                 intermediate_process = intermediate_process + "=>" + str(actual_result)
             return actual_result, use_sympy_or_llm, intermediate_process, code
         except Exception as e:
-            logging.error(f"incalculable << {input_str} >>: {str(e)}, and the simplified expression is << {simplified_expr} >>")
+            logging.error(f"the simplified expression is << {temp_key} = {simplified_expr} >> --- incalculable << {input_str} >>: {str(e)}")
             # actual_result = simplified_expr
             use_sympy_or_llm = 'sympy and llm'
             actual_result_temp, code = get_llm_calculate_result(simplified_expr, question, content, history)
@@ -205,7 +285,7 @@ def get_sympy_calculate_result(input_str, question, content, history):
                 intermediate_process = intermediate_process + "\n\n Code simplifued:" + actual_result_temp + "=>" + actual_result
             return actual_result, use_sympy_or_llm, intermediate_process, code
     except Exception as e:
-        logging.error(f"Unsimplified << {input_str} >>: {str(e)}, and the simplified expression is << {input_str} >>")
+        logging.error(f" the simplified expression is << {temp_key} = {input_str} >> --- Unsimplified << {input_str} >>: {str(e)}")
         simplified_expr = input_str
         # actual_result = simplified_expr
         use_sympy_or_llm = 'sympy and llm'
@@ -227,9 +307,9 @@ def check_calculation(info, question, history):
     info['rightSideOfEqual_code'] = []
     info['JudgmentStepCalculatedCorrectly'] = []
     info['StepCalculatedCorrectlyResult'] = []
-    info['equation_need'] = []
-    info['equation_need_result'] = []
-    info['equation_need_code'] = []
+    info['JudgmentStepEquationCorrectly'] = []
+    info['StepEquationCorrectlyFormat'] = []
+    info['StepEquationCorrectlyFormatLLMResponse'] = []
 
     # 使用正则表达式查找计算表达式和结果
     pattern = r"<<(.+?)=(.+?)>>" # <>是必须的, =是必须的
@@ -259,14 +339,14 @@ def check_calculation(info, question, history):
         info['equation'].append(f"{expr}={expected_result}")
 
         # 判断该表达式所进行的计算是否合适
-        # temp_eqation_need, temp_expr, temp_code = 1, "", ""
-        temp_eqation_need, temp_expr, temp_code = judge_equation_need(expr, question, input_str, history) 
-        info['equation_need'].append(temp_eqation_need)
-        info['equation_need_result'].append(temp_expr)
-        info['equation_need_code'].append(temp_code)
+        judge_eqation_correct, correct_expr, llm_response = judge_equation_need(expr, question, input_str, history) 
+
+        info['JudgmentStepEquationCorrectly'].append(judge_eqation_correct)
+        info['StepEquationCorrectlyFormat'].append(correct_expr)
+        info['StepEquationCorrectlyFormatLLMResponse'].append(llm_response)
         
         # 判断该表达式是否正确计算
-        if temp_eqation_need == 1: # 如果是正确的计算表达式
+        if judge_eqation_correct == 1: # 如果是正确的计算表达式
             # 使用 sympy 计算表达式的结果
             actual_result, use_sympy_or_llm1, intermediate_process1, code1 = get_sympy_calculate_result(expr, question, input_str, history)
             expected_result, use_sympy_or_llm2, intermediate_process2, code2 = get_sympy_calculate_result(expected_result, question, input_str, history)
@@ -286,15 +366,20 @@ def check_calculation(info, question, history):
                 info['JudgmentStepCalculatedCorrectly'].append(1)
                 info['StepCalculatedCorrectlyResult'].append(f"{actual_result}")
         else: # 如果不是正确的计算表达式
-            info['leftSideOfEqualSign'].append("") # 如果不是正确的计算表达式，那么左边和右边的表达式都是空的,这两个位置是记录公式推导过程的
+            info['JudgmentStepCalculatedCorrectly'].append(0)
+            # 如果返回了正确的公式没那么可以进行计算
+            if correct_expr != "ERROR: LLM cannot correct the formula":
+                # 使用 sympy 计算表达式的结果
+                actual_result, use_sympy_or_llm1, intermediate_process1, code1 = get_sympy_calculate_result(correct_expr, question, input_str, history)
+
+            info['leftSideOfEqualSign'].append(intermediate_process1) # 如果不是正确的计算表达式，那么左边和右边的表达式都是空的,这两个位置是记录公式推导过程的
             info['rightSideOfEqualSign'].append("")
-            info['leftSideOfEqual_use_sympy_or_llm'].append("sympy and llm")
+            info['leftSideOfEqual_use_sympy_or_llm'].append(use_sympy_or_llm1)
             info['rightSideOfEqual_use_sympy_or_llm'].append("")
-            info['leftSideOfEqual_code'].append(temp_code)
+            info['leftSideOfEqual_code'].append(code1)
             info['rightSideOfEqual_code'].append("")
 
-            info['JudgmentStepCalculatedCorrectly'].append(0)
-            info['StepCalculatedCorrectlyResult'].append(f"{temp_expr}")
+            info['StepCalculatedCorrectlyResult'].append(f"{actual_result}")
 
 # 串行处理
 def process_jsonl_file(source_path, dest_path):
@@ -313,8 +398,9 @@ def process_jsonl_file(source_path, dest_path):
                     if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
                         # 找到info["content"]中错误的部分进行替换
                         # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
-                        temp_content = replace_calculated_result(info["content"], info["equation"], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
+                        temp_content = replace_calculated_result(info["content"], info["equation"], info['JudgmentStepEquationCorrectly'], info['StepEquationCorrectlyFormat'], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
                     history += f"{step}: {temp_content}\n"
+                    info["history"] = history
             # 将修改后的数据写回新的JSONL文件
             json.dump(data, dest_file, ensure_ascii=False)
             dest_file.write('\n')
@@ -324,15 +410,19 @@ def process_line(line):
     data = json.loads(line)
     question = data['questions']
     history = ""
+    history_json = {}
     if 'solution' in data:
         for step, info in data['solution'].items():
             check_calculation(info, question, history)
             temp_content = info['content']
+            # 为了方便后续进行本步骤的判断，需要修正历史步骤中的错误部分
             if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
                 # 找到info["content"]中错误的部分进行替换
                 # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
-                temp_content = replace_calculated_result(info["content"], info["equation"], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
+                temp_content = replace_calculated_result(info["content"], info["equation"], info['JudgmentStepEquationCorrectly'], info['StepEquationCorrectlyFormat'], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
             history += f"{step}: {temp_content}\n"
+            history_json[step] = temp_content
+            info['history_json'] = history_json
     # 将处理后的数据转换为字符串以便写入文件
     return json.dumps(data, ensure_ascii=False) + '\n'
 
@@ -344,7 +434,7 @@ def process_jsonl_file_concurrent(source_path, dest_path):
     results = []
 
     # 使用 ThreadPoolExecutor 来并发处理每一行
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         # 提交所有行到线程池
         future_to_line = {executor.submit(process_line, line): line for line in tqdm(lines, desc='Processing')}
 
@@ -361,7 +451,7 @@ def process_jsonl_file_concurrent(source_path, dest_path):
 
 def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder):
     
-    print("第三步判断单步计算是否正确……")
+    print("第三步判断单步计算是否正确,包括公式的正确性和结果的正确性……")
 
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
@@ -371,6 +461,7 @@ def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder):
             source_path = os.path.join(source_folder, filename)
             print("正在处理文件:", source_path)
             dest_path = os.path.join(target_folder, filename)
+            # 串行处理
             # process_jsonl_file(source_path, dest_path)
             # 并行处理
             process_jsonl_file_concurrent(source_path, dest_path)
