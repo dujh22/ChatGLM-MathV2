@@ -2,6 +2,7 @@ import json
 import os
 import re
 from tqdm import tqdm
+import highlight_equations
 
 def process_json_line(line):
     # 加载原始JSON
@@ -34,11 +35,7 @@ def process_json_line(line):
     
     for step, info in new_json["solution"]:
         temp_content = info["content"]
-        # 找到其中可能存在的等式，并用<<>>括起来，插入到 = 后面，类似Step 1: Janet spends 3 hours + 5 hours = <<3+5=8>>8 hours per week on music lessons.
-        match = re.search(r'(\d+)(\s*)(\+|\-|\*|\/)(\s*)(\d+)', temp_content)
-        if match:
-            temp_content = temp_content.replace(match.group(0), f"{match.group(0)} = <<{match.group(0)}>>{eval(match.group(0))}")
-            info["content"] = temp_content
+        info["content"] = highlight_equations(temp_content)
             
     # 返回新的JSON格式
     return json.dumps(new_json, ensure_ascii=False)
