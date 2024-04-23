@@ -34,6 +34,10 @@ def Check1_JsonlVisualization(input_file_path):
                     if key not in ['content', 'label']:
                         row_data[key] = value
                 
+                # 特殊处理
+                if 'LLMJudgmentStepReasoningCorrectly' not in row_data.keys():
+                    row_data['LLMJudgmentStepReasoningCorrectly'] = ""
+                
                 # 如果是第一次循环，初始化csv_writer并写入表头
                 if csv_writer is None:
                     headers = list(row_data.keys())  # 获取所有键作为表头
@@ -48,7 +52,8 @@ def Check1_JsonlVisualization(input_file_path):
 
 def main():
     # 输入文件路径
-    input_file_path = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl'
+    # input_file_path = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl'
+    input_file_path = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Check2Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-10.jsonl'
     Check1_JsonlVisualization(input_file_path)
 
 if __name__ == '__main__':

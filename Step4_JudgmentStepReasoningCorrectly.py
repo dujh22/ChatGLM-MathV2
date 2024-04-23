@@ -144,7 +144,7 @@ def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, star
             Check1_JsonlVisualization(save_file_name)
 
             # 计算acc
-            # Check2_CalculateAccuracy(save_file_name)
+            Check2_CalculateAccuracy(save_file_name)
 
 def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
     

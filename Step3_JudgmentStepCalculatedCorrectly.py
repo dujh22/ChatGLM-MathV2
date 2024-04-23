@@ -15,9 +15,9 @@ from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 import time
 import logging
-# import hunter # 用于调试
+import hunter # 用于调试
 
-# hunter.trace(module=__name__)
+hunter.trace(module=__name__)
 
 
 from use_gpt_api_for_glm_generate import gpt_generate
@@ -26,10 +26,20 @@ ChatGLM = ChatGLM()
 
 # 这里设置使用的llm进行生成，注意在本项目中只有这里一个地方进行相关设置
 def llm_response(prompt, use_glm_or_gpt = 'glm'):
-    if use_glm_or_gpt == 'glm':
-        response = ChatGLM.generate(prompt)
-    else:
-        response = gpt_generate(prompt)
+    response = "ERROR for LLM"
+    for i in range(3):
+        if use_glm_or_gpt == 'glm':
+            try:
+                response = ChatGLM.generate(prompt)
+                return response
+            except:
+                continue
+        else:
+            try:
+                response = gpt_generate(prompt)
+                return response
+            except:
+                continue
     return response
 
 # 配置日志记录器
@@ -422,7 +432,8 @@ def process_line(line):
                 temp_content = replace_calculated_result(info["content"], info["equation"], info['JudgmentStepEquationCorrectly'], info['StepEquationCorrectlyFormat'], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
             history += f"{step}: {temp_content}\n"
             history_json[step] = temp_content
-            info['history_json'] = history_json
+            # 创建一个history_json的副本，并将其赋值给info['history_json']
+            info['history_json'] = history_json.copy()
     # 将处理后的数据转换为字符串以便写入文件
     return json.dumps(data, ensure_ascii=False) + '\n'
 
