@@ -1,31 +1,23 @@
-# 计算单步
-
-import os
-import json
 import re
-from get_data_for_codeTest import get_data_for_codeTest
-from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
-from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
-from Check1_JsonlVisualization import Check1_JsonlVisualization
-
-from run_python_func import run_python
-from tqdm import tqdm
+import json
 import sympy as sp
-from concurrent.futures import ThreadPoolExecutor
-import concurrent.futures
-import time
-import logging
+import subprocess
+
+# 如果打开下面两行，命令行会自动输出代码执行的全部日志
 import hunter # 用于调试
+hunter.trace(module=__name__) # 用于调试
 
-hunter.trace(module=__name__)
-
-
-from use_gpt_api_for_glm_generate import gpt_generate
+# 该部分用于设置调用的LLM相关信息
+import config
+import openai
+# 设定API密钥和基本URL
+openai.api_key = config.GPT_API_KEY
+openai.api_base = config.GPT_BASE_URL
 from chatglm import ChatGLM
 ChatGLM = ChatGLM()
-
+USE_GLM_OR_GPT = 'glm'
 # 这里设置使用的llm进行生成，注意在本项目中只有这里一个地方进行相关设置
-def llm_response(prompt, use_glm_or_gpt = 'glm'):
+def llm_response(prompt, use_glm_or_gpt = USE_GLM_OR_GPT):
     response = "ERROR for LLM"
     for i in range(10):
         if use_glm_or_gpt == 'glm':
@@ -36,14 +28,134 @@ def llm_response(prompt, use_glm_or_gpt = 'glm'):
                 continue
         else:
             try:
-                response = gpt_generate(prompt)
+                # 构造messages
+                messages = [{"role": "user", "content": prompt}]
+                # 调用GPT接口
+                # model = "gpt-3.5-turbo"
+                model = "gpt-4-1106-preview"
+                chat_completion = openai.ChatCompletion.create(model=model, messages = messages)
+                response = chat_completion.choices[0].message.content
                 return response
             except:
                 continue
     return response
 
-# 配置日志记录器
-logging.basicConfig(filename='Step3_JudgmentStepCalculatedCorrectly.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+def run_python(code, timeout=None):
+    result = subprocess.run(['python', '-c', code], capture_output=True, text=True, timeout=timeout)
+    stdout = result.stdout
+    stderr = result.stderr
+    return stdout, stderr
+
+def all_alpha(str):
+    if str == 'x': # 特例
+        return False
+    if all(temp.isalpha() for temp in str):
+        return True
+    else:
+        return False
+
+def highlight_equations(text):
+    parts2 = text.split(' ')
+    if len(parts2) == 1:
+        return text  # 没有等号，返回原文本
+    
+    # 预处理，如果数字后面紧跟着一个字母串，可以删去这个字母串
+    parts = []
+    i = 0
+    while i < len(parts2):
+        parts.append(parts2[i])
+        if parts2[i].isdigit():
+            if i + 1 < len(parts2) and all_alpha(parts2[i + 1]):
+                i += 2
+            else:
+                i += 1
+        else:
+            i += 1
+
+    result = []
+    last_pos = 0
+    
+    for i in range(len(parts)):
+        # 找到=所在的位置
+        if '=' not in parts[i]:
+            continue
+        else:
+            start_pos = i
+            end_pos = i
+            if start_pos > 0:
+                while all_alpha(parts[start_pos - 1]) == False:
+                    start_pos -= 1
+                    if start_pos == 0:
+                        break
+            if end_pos < len(parts) - 1:
+                while all_alpha(parts[end_pos + 1]) == False:
+                    end_pos += 1
+                    if end_pos == len(parts) - 1:
+                        break
+            # print(parts[start_pos:end_pos + 1])
+            equation = ' '.join(parts[start_pos:end_pos + 1])
+            equation = equation.replace('=', f'=<<{equation}>>')
+            for item in range(last_pos, start_pos):
+                result.append(parts[item])
+            result.append(equation)
+            last_pos = end_pos + 1
+    
+    # 添加最后一个没有等号的部分
+    for item in range(last_pos, len(parts)):
+        result.append(parts[item])
+
+    return ' '.join(result)
+
+def SplitByRow(data):
+    # 初始化新的JSON格式
+    new_json = {
+        "questions": data["questions"],
+        "solution": {},
+    }
+
+    # 判断solution中的换行符数量
+    newline_count = data['solution'].count('\n')
+
+    if newline_count >= 2:
+        # 如果不少于2个换行符，按照换行符切割
+        solutions = data['solution'].split('\n')
+    else:
+        # 否则，使用正则表达式按句号切割非小数点
+        solutions = re.split(r'(?<=[^.0-9])\.(?=[^0-9])', data['solution'])
+
+    # 处理每个解决方案部分
+    for i, solution in enumerate(solutions):
+        if solution.strip():  # 确保切割后的文本不为空
+            new_json["solution"][f"Step {i+1}"] = {
+                "content": solution.strip(),
+                "label": 1  # 默认标签为1
+            }
+
+    # 处理每个解决方案部分的数学公式高亮
+    for step, info in new_json["solution"].items():
+        temp_content = info["content"]
+        info["content"] = highlight_equations(temp_content)
+    
+    # 返回新的JSON格式
+    return new_json
+
+def is_calculation(content):
+    # 检查是否存在常见的计算符号
+    if re.search(r'[\+\-\*/=%^]', content):
+        return 1
+    # 检查括号内是否存在计算符号，需要使用更复杂的正则表达式
+    if re.search(r'\([^)]*[\+\-\*/=%^][^)]*\)', content):
+        return 1
+    return 0
+
+def IsCalculationOrReasoning(data):
+    # 遍历每一步的解决方案
+    if 'solution' in data:
+        for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
+            # 判断并添加新键
+            info['is_calculation_or_reasoning'] = is_calculation(info['content'])
+    # 将修改后的数据写回新的JSONL文件
+    return data
 
 # 修正函数
 # 1.在 content 字符串中查找被 << 和 >> 包围的表达式。
@@ -84,6 +196,7 @@ def replace_calculated_result(content, equations, equations_need, equations_corr
                     content = content.replace(variable, temp_variable)
                 
     return content
+
 
 # 删除公式中可能存在的单位
 def simplify_expression(expr):
@@ -247,7 +360,7 @@ def evaluate_and_simplify(expr):
             return int(rounded_result)  # 四舍五入后的整数
         else:
             return float(numerical_result)  # 保留为浮点数
-
+        
 def get_sympy_calculate_result(input_str, question, content, history):
     use_sympy_or_llm = 'sympy'
     temp_key = input_str
@@ -288,7 +401,6 @@ def get_sympy_calculate_result(input_str, question, content, history):
                 intermediate_process = intermediate_process + "=>" + str(actual_result)
             return actual_result, use_sympy_or_llm, intermediate_process, code
         except Exception as e:
-            logging.error(f"the simplified expression is << {temp_key} = {simplified_expr} >> --- incalculable << {input_str} >>: {str(e)}")
             # actual_result = simplified_expr
             use_sympy_or_llm = 'sympy and llm'
             actual_result_temp, code = get_llm_calculate_result(simplified_expr, question, content, history)
@@ -297,7 +409,6 @@ def get_sympy_calculate_result(input_str, question, content, history):
                 intermediate_process = intermediate_process + "\n\n Code simplifued:" + actual_result_temp + "=>" + actual_result
             return actual_result, use_sympy_or_llm, intermediate_process, code
     except Exception as e:
-        logging.error(f" the simplified expression is << {temp_key} = {input_str} >> --- Unsimplified << {input_str} >>: {str(e)}")
         simplified_expr = input_str
         # actual_result = simplified_expr
         use_sympy_or_llm = 'sympy and llm'
@@ -393,33 +504,7 @@ def check_calculation(info, question, history):
 
             info['StepCalculatedCorrectlyResult'].append(f"{actual_result}")
 
-# 串行处理
-def process_jsonl_file(source_path, dest_path):
-    with open(source_path, 'r', encoding='utf-8') as src_file, \
-         open(dest_path, 'w', encoding='utf-8') as dest_file:
-        for line in tqdm(src_file, desc='Processing'):
-            data = json.loads(line)
-            # 遍历每一步的解决方案
-            question = data['questions']
-            history = ""
-            if 'solution' in data:
-                for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
-                    # 判断并添加新键
-                    check_calculation(info, question, history)
-                    temp_content = info['content']
-                    if len(info["JudgmentStepCalculatedCorrectly"]) > 0:
-                        # 找到info["content"]中错误的部分进行替换
-                        # 主要是在字符串中找到<<80*2=1600>>1600比如，然后替换1600>>1600
-                        temp_content = replace_calculated_result(info["content"], info["equation"], info['JudgmentStepEquationCorrectly'], info['StepEquationCorrectlyFormat'], info["JudgmentStepCalculatedCorrectly"], info["StepCalculatedCorrectlyResult"])
-                    history += f"{step}: {temp_content}\n"
-                    info["history"] = history
-            # 将修改后的数据写回新的JSONL文件
-            json.dump(data, dest_file, ensure_ascii=False)
-            dest_file.write('\n')
-
-# 并发处理
-def process_line(line):
-    data = json.loads(line)
+def JudgmentStepCalculatedCorrectly(data):
     question = data['questions']
     history = ""
     history_json = {}
@@ -436,77 +521,97 @@ def process_line(line):
             history_json[step] = temp_content
             # 创建一个history_json的副本，并将其赋值给info['history_json']
             info['history_json'] = history_json.copy()
+    return data
+
+# 判断单步推理是否正确
+def check_reasoning(per_step, content, question, history):
+    # promt = f"""我正在尝试解决一个数学问题，具体问题是：“{question}”。\n\n 我之前的解题步骤如下：“{history}” \n\n 现在我正在推理这一步是：“{per_step}”，具体推理内容是：“{content}”。\n\n 请评估我这一步的推理是否正确。\n\n 如果我目前的推理步骤正确并且与问题相关，只需要回答“yes”。\n\n 如果这一步推理错误或者不相关，需要你进行修正，并直接提供正确或更相关的推理步骤，用<<>>包围起来。"""
+    prompt = f"""I am trying to solve a math problem, the specific question is: "{question}". \n\n My previous step in solving the problem was as follows:"{history}" \n\n Now I'm reasoning that this step is:"{per_step}" and the specific reasoning is:"{content}". \n\n Please evaluate if my reasoning in this step is correct. \n\n If my current reasoning step is correct and relevant to the question, just answer "yes". \n\n If this step of reasoning is incorrect or irrelevant, you are required to correct it and provide the correct or more relevant step of reasoning directly, surrounded by <<>>."""
+    for i in range(10):
+        # response = gpt_generate(prompt)
+        response = llm_response(prompt)  # 调用生成方法
+        # 获取response的第一句话或者如果没有符号就是完整的response
+        response_first_sentence = response.split(".")[0]
+        # 提取 response 的前三个字符，并将它们转换成小写来进行判断。
+        if response_first_sentence[:3].lower() == "yes" or "yes" in response_first_sentence.lower():  
+            return 1, response
+        else:
+            # 尝试修正表达式
+            match = re.search(r'<<(.+?)>>', response)
+            if match:
+                return 0, match.group(1)
+    return 0, "Error: LLM cannot generate correct reasoning."
+
+def JudgmentStepReasoningCorrectly(data):
+    if 'solution' in data:
+        # 获取历史信息
+        history = ""
+        question = data['questions']
+        for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
+            history_json = info['history_json']
+            if info['is_calculation_or_reasoning'] == 1: # 如果是计算步
+                info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = 1, "This is a calculation step."
+            else:
+                # 判断并添加新键
+                info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = check_reasoning(step, info['content'], question, history)
+                # 添加到历史信息中
+                if info['JudgmentStepReasoningCorrectly'] == 1:
+                    history_json[step] = info['content']
+                else:
+                    history_json[step] = info['StepReasoningCorrectlyResult']
+            history += f"{step}: {history_json[step]}\n"
+
     # 将处理后的数据转换为字符串以便写入文件
-    return json.dumps(data, ensure_ascii=False) + '\n'
+    return data
 
-def process_jsonl_file_concurrent(source_path, dest_path):
-    # 读取文件的所有行
-    with open(source_path, 'r', encoding='utf-8') as file:
-        lines = file.readlines()
-
-    results = []
-
-    # 使用 ThreadPoolExecutor 来并发处理每一行
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        # 提交所有行到线程池
-        future_to_line = {executor.submit(process_line, line): line for line in tqdm(lines, desc='Processing')}
-
-        # 使用tqdm创建进度条
-        with tqdm(total=len(future_to_line), desc='Processing lines') as progress:
-            # 收集处理结果
-            for future in concurrent.futures.as_completed(future_to_line):
-                results.append(future.result())
-                progress.update(1)  # 更新进度条
-
-    # 写入结果到目标文件
-    with open(dest_path, 'w', encoding='utf-8') as file:
+def out_to_file(data):
+    results = [json.dumps(data, ensure_ascii=False) + '\n']
+    with open("output.jsonl", 'w', encoding='utf-8') as file:
         file.writelines(results)
 
-def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder):
-    
-    print("第三步判断单步计算是否正确,包括公式的正确性和结果的正确性……")
+def postprocess(data):
+    # 只保留需要的部分
+    need_result = {}
+    need_result["questions"] = data["questions"]
+    need_result['solution'] = {}
+    temp_history = {}
+    for step, info in data["solution"].items():
+        need_result['solution'][step] = {
+            "content": info["content"],
+            'is_calculation_or_reasoning': info['is_calculation_or_reasoning'],
+            "JudgmentStepCalculatedCorrectly": info["JudgmentStepCalculatedCorrectly"],
+            "JudgmentStepEquationCorrectly": info["JudgmentStepEquationCorrectly"],
+            "JudgmentStepReasoningCorrectly": info["JudgmentStepReasoningCorrectly"],
+            "StepCalculatedCorrectlyResult": info["StepCalculatedCorrectlyResult"],
+            "StepEquationCorrectlyFormat": info["StepEquationCorrectlyFormat"],
+            "StepReasoningCorrectlyResult": info["StepReasoningCorrectlyResult"]
+        }
+        temp_history = info["history_json"]
+    need_result['modifiedResult'] = temp_history
+    return need_result
 
-    if not os.path.exists(target_folder):
-        os.makedirs(target_folder)
-    
-    for filename in os.listdir(source_folder):
-        if filename.endswith('.jsonl'):
-            source_path = os.path.join(source_folder, filename)
-            print("正在处理文件:", source_path)
-            dest_path = os.path.join(target_folder, filename)
-            # 串行处理
-            # process_jsonl_file(source_path, dest_path)
-            # 并行处理
-            process_jsonl_file_concurrent(source_path, dest_path)
+def api(question, solution):
+    data = {"questions": question, "solution": solution}
+    data1 = SplitByRow(data) # 数据分行与公式高亮
+    data2 = IsCalculationOrReasoning(data1) # 判断计算步还是推理步
+    data3 = JudgmentStepCalculatedCorrectly(data2) # 针对计算步的自动标注
+    data4 = JudgmentStepReasoningCorrectly(data3) # 针对推理步的自动标注
+    out_data = data4
 
-            # 可视化结果输出，用于debug
-            Check1_JsonlVisualization(dest_path) 
-# 使用方法：
+    # 如果全量输出，则关闭下面一行，否则只输出必要信息
+    out_data = postprocess(data4)
+
+    # 如果有到导出文件的必要，可打开下面一行
+    out_to_file(out_data)
+
+    # 返回处理后的数据
+    return json.dumps(out_data, ensure_ascii=False)
+
 def main():
-    code_test_state = True
-    base_folder = "F://code//github//ChatGLM-MathV2"
-    dataset_name = "peiyi9979_Math_Shepherd"
-    source_folder = base_folder + '//raw_data//' + dataset_name
-
-    mid_name = base_folder + '//data//' + dataset_name
-
-    if code_test_state:
-        get_data_for_codeTest(source_folder, new_folder_suffix='_for_codeTest', num_points=10)
-        source_folder = source_folder + "_for_codeTest"
-
-        target_folder1 = mid_name + "_for_codeTest" + "_Step1_SplitByRow_forMathShepherd"
-        target_folder2 = mid_name + "_for_codeTest" + "_Step2_IsCalculationOrReasoning"
-        target_folder3 = mid_name + "_for_codeTest" + "_Step3_JudgmentStepCalculatedCorrectly"
-    else:
-        target_folder1 = mid_name + "_Step1_SplitByRow_forMathShepherd"
-        target_folder2 = mid_name + "_Step2_IsCalculationOrReasoning"
-        target_folder3 = mid_name + "_Step3_JudgmentStepCalculatedCorrectly"
-
-    Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
-    Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
-    Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
-
-    
+    question = "Janet pays $40/hour for 3 hours per week of clarinet lessons and $28/hour for 5 hours a week of piano lessons. How much more does she spend on piano lessons than clarinet lessons in a year?"
+    solution = "Step 1: Janet spends 3 hours + 5 hours = 8 hours per week on music lessons. \nStep 2: She spends 40 * 3 = 120 on clarinet lessons per week. \nStep 3: She spends 28 * 5 = 140 on piano lessons per week. \nStep 4: Janet spends 120 + 140 = 260 on music lessons per week. \nStep 5: She spends 260 * 52 = 13520 on music lessons in a year. The answer is: 13520 "
+    result = api(question, solution)
+    print(result)
 
 if __name__ == '__main__':
     main()

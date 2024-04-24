@@ -2,7 +2,7 @@ import json
 import os
 import re
 from tqdm import tqdm
-import highlight_equations
+from highlight_equations import highlight_equations
 
 def process_json_line(line):
     # 加载原始JSON
@@ -32,8 +32,9 @@ def process_json_line(line):
                 "content": solution.strip(),
                 "label": 1  # 默认标签为1
             }
-    
-    for step, info in new_json["solution"]:
+
+    # 处理每个解决方案部分的数学公式高亮
+    for step, info in new_json["solution"].items():
         temp_content = info["content"]
         info["content"] = highlight_equations(temp_content)
             

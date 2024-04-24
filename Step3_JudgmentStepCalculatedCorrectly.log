@@ -1,8 +1,16 @@
-2024-04-23 12:39:13,960 - ERROR -  the simplified expression is <<   =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
-SyntaxError: invalid syntax (<string>, line 0)
-2024-04-23 12:40:12,468 - ERROR -  the simplified expression is <<  This is the correct expression for the pens left after the first month.  = . >> --- Unsimplified << . >>: Sympify of expression 'could not parse '.'' failed, because of exception being raised:
+2024-04-24 10:52:09,313 - ERROR -  the simplified expression is << (3 hours/week) * ($40/hour) + (5 hours/week) * ($28/hour) = (3)*(40/)+(5)*(28/) >> --- Unsimplified << (3)*(40/)+(5)*(28/) >>: Sympify of expression 'could not parse '(3)*(40/)+(5)*(28/)'' failed, because of exception being raised:
 SyntaxError: invalid syntax (<string>, line 1)
-2024-04-23 14:48:49,471 - ERROR -  the simplified expression is <<   =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
-SyntaxError: invalid syntax (<string>, line 0)
-2024-04-23 14:49:21,090 - ERROR -  the simplified expression is <<   =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
-SyntaxError: invalid syntax (<string>, line 0)
+2024-04-24 10:57:52,549 - ERROR -  the simplified expression is << (3 hours * $40/hour) + (5 hours * $28/hour) = (3*40/)+(5*28/) >> --- Unsimplified << (3*40/)+(5*28/) >>: Sympify of expression 'could not parse '(3*40/)+(5*28/)'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-24 10:58:11,805 - ERROR -  the simplified expression is << 3 hours * $40/hour = 3*40/ >> --- Unsimplified << 3*40/ >>: Sympify of expression 'could not parse '3*40/'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-24 10:58:38,882 - ERROR -  the simplified expression is << ($28/hour) * 5 hours = $140/week = (28/)*5 >> --- Unsimplified << (28/)*5 >>: Sympify of expression 'could not parse '(28/)*5'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-24 11:24:34,065 - ERROR -  the simplified expression is << (3 hours * $40/hour) + (5 hours * $28/hour) = (3*40/)+(5*28/) >> --- Unsimplified << (3*40/)+(5*28/) >>: Sympify of expression 'could not parse '(3*40/)+(5*28/)'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-24 11:24:59,432 - ERROR -  the simplified expression is << (5 hours * $28/hour) - (3 hours * $40/hour) = (5*28/)-(3*40/) >> --- Unsimplified << (5*28/)-(3*40/) >>: Sympify of expression 'could not parse '(5*28/)-(3*40/)'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-24 11:25:20,340 - ERROR -  the simplified expression is << (5 hours * $28/hour - 3 hours * $40/hour) * 52 weeks = (5*28/-3*40/)*52 >> --- Unsimplified << (5*28/-3*40/)*52 >>: Sympify of expression 'could not parse '(5*28/-3*40/)*52'' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 1)
+2024-04-24 11:32:25,674 - ERROR -  the simplified expression is << (28 * 5) - (40 * 3)) * 52 = (28*5)-(40*3))*52 >> --- Unsimplified << (28*5)-(40*3))*52 >>: Sympify of expression 'could not parse '(28*5)-(40*3))*52'' failed, because of exception being raised:
+TokenError: ('EOF in multi-line statement', (2, 0))
