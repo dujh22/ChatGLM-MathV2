@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import TGI_URL # Import TGI_URL from config.py
+
 import json  # 导入json模块，用于处理JSON数据
 import argparse  # 导入argparse模块，用于处理命令行参数
 from functools import partial  # 从functools模块导入partial，用于固定函数的部分参数
@@ -12,7 +17,8 @@ def query_tgi_completion(prompt):
     '''
         这段 Python 代码会配置并向文本生成 API 发送 POST 请求，其中的特定参数会影响生成文本的风格和多样性。这些配置的温度和 top_p 值各不相同，会影响文本生成的确定性或创造性。随机模块用于在这些配置之间进行选择，从而在生成过程中引入可变性。这种设置尤其适用于需要可控和多样化文本输出的应用，例如自动内容生成或聊天机器人。
     '''
-    url = "http://xxx:8080/generate"  # 设置API的URL地址
+    # url = "http://xxx:8080/generate"  # 设置API的URL地址
+    url = TGI_URL
     configs = [
         {"temperature": 0.1, "top_p": 0.7},  # 配置列表第一个配置项，温度较低，生成内容较为保守
         {"temperature": 0.9, "top_p": 0.9},  # 配置列表第二个配置项，温度较高，生成内容较为多样
@@ -31,9 +37,10 @@ def query_tgi_completion(prompt):
         "seed": random.randint(0, 100000),  # 随机种子，用于生成结果的可复现性
         "temperature": config["temperature"],  # 从选定的配置中获取温度参数
         "top_p": config["top_p"],  # 从选定的配置中获取top_p参数，控制生成的集中性
-        "stop": ["", "", ""]  # 设置终止符，这里为空，不指定特定终止符
+        "stop": ["<|endoftext|>", "<|user|>", "<|observation|>"]  # 设置终止符，这里为空，不指定特定终止符
     }
-    requests.post(url, json=payload, verify=False)  # 发送POST请求到服务器，携带定义好的数据载荷，verify=False表示不验证SSL证书
+    output = requests.post(url, json=payload, verify=False)  # 发送POST请求到服务器，携带定义好的数据载荷，verify=False表示不验证SSL证书
+    print(output)
 
 
 def split_response(response): # 使用正则表达式按换行符分割响应文本
@@ -44,6 +51,7 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
     '''
         该函数处理包含提示和响应详细信息的给定字典 x，为响应的每个步骤生成扩展路径。它使用辅助函数 query_tgi_completion，尝试生成扩展路径，每一步最多可生成三次，以确保稳健的错误处理和重试机制。这种方法适用于需要根据先前步骤顺序生成内容的场景，例如为机器学习模型或自动应答系统创建训练数据。
     '''
+
     prompt = x[prompt_key]  # 从字典x中获取提示信息
     response = x[response_key]  # 从字典x中获取响应信息
     output = []  # 初始化输出列表，用来存储所有生成的扩展路径
@@ -147,21 +155,39 @@ def select_math_data_by_rating(input_file):
     return processed  # 返回处理后的数据列表
 
 
+def main():
+    code_test = True # 是否为代码测试
+    if code_test == False:
+        input_file_path = None
+        prompt_key = None
+        response_key = "generation"
+        reference_key = "answer"
+        backbone = "gpt-3.5-turbo"
+        mode = "response"
+    else:
+        prompt_key = "question"
+        response_key = "response"
+        reference_key = "solution"
+        # 下面三个参数需要根据mode动态调整
+        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi.jsonl"
+        # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi.jsonl"
+        backbone = "tgi" # generate用tgi，critic用chatglm_platform
+        # backbone = "chatglm_platform"
+        mode = "generation"
+        # mode = "critic"
 
-if __name__ == "__main__":
     # 创建命令行解析器
     parser = argparse.ArgumentParser()
     # 添加各种命令行参数
-    parser.add_argument("--input_file", type=str, default=None)  # 指定输入文件路径
-    parser.add_argument("--mode", type=str, default="response")  # 指定运行模式
-    parser.add_argument("--backbone", type=str, default="gpt-3.5-turbo")  # 指定使用的模型
-    parser.add_argument("--prompt_key", type=str, default=None)  # 指定提示键名
+    parser.add_argument("--input_file", type=str, default=input_file_path)  # 指定输入文件路径
+    parser.add_argument("--mode", type=str, default=mode)  # 指定运行模式
+    parser.add_argument("--backbone", type=str, default=backbone)  # 指定使用的模型
+    parser.add_argument("--prompt_key", type=str, default=prompt_key)  # 指定提示键名
     # "gpt-4-1106-preview"  # 注释中提及可能使用的模型版本
     parser.add_argument("--skip_response", action="store_true", default=False)  # 是否跳过响应生成
     parser.add_argument("--skip_generated", action="store_true", default=False)  # 是否跳过已生成的响应
-    parser.add_argument("--prompt_template", type=str, default=None)  # 指定提示模板
-    parser.add_argument("--reference_key", type=str, default="answer")  # 指定参考答案键名
-    parser.add_argument("--response_key", type=str, default="response")  # 指定响应键名
+    parser.add_argument("--reference_key", type=str, default=reference_key)  # 指定参考答案键名
+    parser.add_argument("--response_key", type=str, default=response_key)  # 指定响应键名
     args = parser.parse_args()  # 解析命令行参数
     
     # 根据指定的模式进行相应的操作
@@ -189,3 +215,7 @@ if __name__ == "__main__":
             ),  # 传递reference_key参数
             is_glm=False  # 指定是否使用GLM模型
         )
+
+
+if __name__ == "__main__":
+    main()

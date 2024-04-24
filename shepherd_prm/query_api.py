@@ -1,3 +1,12 @@
+# 如果打开下面两行，命令行会自动输出代码执行的全部日志
+# import hunter # 用于调试
+# hunter.trace(module=__name__) # 用于调试
+
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import CRITIC_URL # 从config.py中导入CRITIC_URL
+from config import TGI_URL # Import TGI_URL from config.py
 
 # 本脚本对多进程支持，用于处理大数据
 
@@ -29,7 +38,8 @@ def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
     '''
         该功能用于与基于聊天的模型平台通信，向其发送当前和历史对话数据，然后接收生成的回复。它可以通过温度和top_p 等参数对生成过程进行详细定制，因此适用于需要根据用户输入和以前的对话上下文动态生成回复的交互式应用。
     '''
-    url = "http://xxx:9090/v1/chat/completions"  # 设置API的URL
+    # url = "http://xxx:9090/v1/chat/completions"  # 设置API的URL
+    url = CRITIC_URL  # 设置API的URL
 
     messages = []  # 初始化消息列表
     for turn in history:  # 遍历历史记录，每一项都包含用户和助手的对话
@@ -78,13 +88,15 @@ def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_r
     '''
         该函数根据对话历史和当前提示构建消息流，然后查询指定 URL 上的文本生成模型。它会调整生成参数，如采样、标记限制和温度，并在出现错误时重试请求。这种功能对于将历史对话上下文整合到响应生成中的系统来说非常典型，因此适用于需要保持连贯和上下文适当的交互的聊天应用或对话系统。
     '''
-    url = "http://xxx:8080/generate"  # 设置API的URL
+    # url = "http://xxx:8080/generate"  # 设置API的URL
+    url = TGI_URL 
     messages = ""  # 初始化消息字符串
     for turn in history:
         ques, ans = turn["prompt"], turn["response"]  # 从历史中获取问题和回答
-        messages += f"\n{ques}\n{ans}"  # 将问题和回答按格式追加到消息字符串
+        messages += f"<|user|>\n{ques}<|assistant|>\n{ans}"  # 将问题和回答按格式追加到消息字符串
 
-    messages += f"\n{prompt}\n"  # 将当前的提示追加到消息字符串
+    messages += f"<|user|>\n{prompt}<|assistant|>\n"  # 将当前的提示追加到消息字符串
+
     inputs = {  # 创建请求体
         "inputs": messages,  # 包含历史和当前提示的消息文本
         "stream": False,  # 不使用流式传输
@@ -98,7 +110,7 @@ def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_r
             "seed": None,  # 设置随机种子（None表示不固定）
             "temperature": 1,  # 设置生成文本的温度
             "top_p": 0.9,  # 设置Top-p参数，控制生成的集中性
-            "stop": ["", "", ""]  # 设置停止符号
+            "stop": ["<|endoftext|>", "<|user|>", "<|observation|>"]  # 设置停止符号
         }
     }
 
@@ -198,7 +210,7 @@ def build_training_file(input_file, output_file, worker_func, is_glm=False, num_
     def read_data_into_queue():
         cnt = 0  # 初始化计数器
         
-        with open(input_file, "r") as r:  # 以只读模式打开输入文件
+        with open(input_file, "r", encoding="utf-8") as r:  # r以只读she模式打开输入文件
             print("read files")
             for line in r:  # 逐行读取文件
                 task_queue.put(line)  # 将行数据放入任务队列
@@ -221,7 +233,7 @@ def build_training_file(input_file, output_file, worker_func, is_glm=False, num_
 
     progress_bar = tqdm()  # 初始化进度条
     print("----- GOGOGOGOGOGOGO !!!!!")
-    with open(output_file, 'w') as w:  # 以写模式打开输出文件
+    with open(output_file, 'w', encoding='utf-8') as w:  # 以写入模式打开输出文件
         num_finished = 0  # 初始化已完成进程数
         num_save = 0  # 初始化已保存项目数
         while num_finished < num_processes:  # 循环，直到所有处理进程完成
@@ -272,7 +284,7 @@ def standard_prompt_response(
         history = x["history"]
     else:
         history = []
-        
+
     # 从字典中获取提示文本
     prompt = x[prompt_key]
 
@@ -301,24 +313,25 @@ def standard_prompt_response(
     import random
 
     # 如果生成了结果，随机打印其中的一个
-    if len(result) > 0:        
+    if len(responses) > 0:        
         rnm = random.randint(0, 20)
         if rnm == 0:
-            print(f"#### Question: {prompt} ------ \n Response: ", result[0])        
+            print(f"#### Question: {prompt} ------ \n Response: ", responses[0][1])        
             print()
 
     # 如果只需要生成一个响应，取列表中的第一个
     if num_generation == 1:
-        result = result[0][1]
+        result = responses[0][1]
 
     # 将生成的响应存储在字典x中指定的键下
     x[response_key] = result
     return result
     
-def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", response_key="response", reference_key="answer", max_retry=3):
+def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", response_key="response", reference_key="answer", max_retry=3, PROMPT_TEMPLATE=None):
     '''
         该函数使用指定的模型（主干）评估数学应答。它用问题陈述、正确答案和助手的回答格式化输入，然后查询模型以评估回答的准确性。该函数会多次尝试以获得评级，并将结果添加到输出列表中，其中包括答案、评级和完整的判断结果。这种设置通常用于需要对回答进行自动评分或反馈的教育或测试环境中。
     '''
+
     # prompt = 
     # 获取响应数据，如果响应是字符串，则转换为列表形式
     response = x[response_key]
@@ -370,32 +383,56 @@ def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", res
             })  # 将评分结果添加到输出列表
 
     x["critic_result"] = outputs  # 将输出结果存入输入字典中
+
     return x
 
 # 准备模板函数
 def prepare_template(prompt_filepath): 
     print(f"Load prompt template from {prompt_filepath}...")  # 打印加载提示模板的文件路径信息
     global PROMPT_TEMPLATE  # 声明PROMPT_TEMPLATE为全局变量
-    PROMPT_TEMPLATE = open(prompt_filepath).read().strip()  # 读取并去除模板文件中的首尾空白
+    PROMPT_TEMPLATE = open(prompt_filepath, encoding='utf-8').read().strip()
+    return PROMPT_TEMPLATE
 
+def main():
+    code_test = True # 是否为代码测试
+    if code_test == False:
+        input_file_path = None
+        prompt_template_path = None
+        prompt_key = None
+        response_key = "response"
+        reference_key = "answer"
+        backbone = "gpt-3.5-turbo"
+        mode = "response"
+    else:
+        prompt_template_path = 'F://code//github//ChatGLM-MathV2//shepherd_prm//templates//criticllm_math_template.txt'
+        prompt_key = "question"
+        response_key = "response"
+        reference_key = "solution"
+        # 下面三个参数需要根据mode动态调整
+        # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0.jsonl"
+        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi.jsonl"
+        # backbone = "tgi" # generate用tgi，critic用chatglm_platform
+        backbone = "chatglm_platform"
+        # mode = "response"
+        mode = "critic"
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()  # 创建ArgumentParser对象
-    parser.add_argument("--input_file", type=str, default=None)  # 添加输入文件路径的命令行参数
-    parser.add_argument("--mode", type=str, default="response")  # 添加模式选择的命令行参数
-    parser.add_argument("--backbone", type=str, default="gpt-3.5-turbo")  # 添加使用的模型版本的命令行参数
-    parser.add_argument("--prompt_key", type=str, default=None)  # 添加提示关键字的命令行参数
+    # 创建ArgumentParser对象
+    parser = argparse.ArgumentParser()  
+    parser.add_argument("--input_file", type=str, default=input_file_path)  # 添加输入文件路径的命令行参数
+    parser.add_argument("--mode", type=str, default=mode)  # 添加模式选择的命令行参数
+    parser.add_argument("--backbone", type=str, default=backbone)  # 添加使用的模型版本的命令行参数
+    parser.add_argument("--prompt_key", type=str, default=prompt_key)  # 添加提示关键字的命令行参数
     parser.add_argument("--skip_response", action="store_true", default=False)  # 添加是否跳过响应的命令行参数
     parser.add_argument("--skip_generated", action="store_true", default=False)  # 添加是否跳过生成的命令行参数
-    parser.add_argument("--prompt_template", type=str, default=None)  # 添加提示模板的命令行参数
-    parser.add_argument("--reference_key", type=str, default="answer")  # 添加参考答案关键字的命令行参数
-    parser.add_argument("--response_key", type=str, default="response")  # 添加响应关键字的命令行参数
+    parser.add_argument("--prompt_template", type=str, default=prompt_template_path)  # 添加提示模板的命令行参数
+    parser.add_argument("--reference_key", type=str, default=reference_key)  # 添加参考答案关键字的命令行参数
+    parser.add_argument("--response_key", type=str, default=response_key)  # 添加响应关键字的命令行参数
     parser.add_argument("--num_generation", type=str, default=1)  # 添加生成数量的命令行参数
     parser.add_argument("--num_process", type=int, default=10)  # 添加处理数量的命令行参数
     args = parser.parse_args()  # 解析命令行参数
     
     if args.mode == "critic":  # 如果模式为评估
-        prepare_template(args.prompt_template)  # 准备提示模板
+        PROMPT_TEMPLATE = prepare_template(args.prompt_template)  # 准备提示模板
         # 构建训练文件
         build_training_file(
             input_file=args.input_file,
@@ -405,7 +442,8 @@ if __name__ == '__main__':
                 backbone=args.backbone, 
                 prompt_key=args.prompt_key, 
                 reference_key=args.reference_key,
-                response_key=args.response_key
+                response_key=args.response_key,
+                PROMPT_TEMPLATE = PROMPT_TEMPLATE
             ),
             is_glm=False, 
             num_process=args.num_process  # 设置是否使用GLM模型和处理数量
@@ -421,11 +459,24 @@ if __name__ == '__main__':
                 skip_response=args.skip_response, 
                 skip_generated=args.skip_generated, 
                 backbone=args.backbone, 
-                key=args.prompt_key, 
-                num_generation=args.num_generation
+                prompt_key=args.prompt_key, 
+                response_key=args.response_key
             ),
             is_glm=False,
-            response_key=args.response_key  # 设置响应关键字
+            num_process=args.num_process  # 设置是否使用GLM模型和处理数量
         )
     else:
         raise NotImplementedError  # 如果模式未实现，则抛出异常
+    
+
+if __name__ == '__main__':
+    main()
+
+    # q = [
+    #     "你好",
+    #     "你是谁",
+    #     "写个小作文"
+    # ]
+    # for question in q:
+    #     print("Q:", question)
+    #     print("A", query_chatglm_tgi(""))
