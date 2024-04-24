@@ -6,7 +6,7 @@
 
 详细pipeline见下图：
 
-![whiteboard_exported_image](README.assets/whiteboard_exported_image-17139384959051.png)
+![whiteboard_exported_image](png/whiteboard_exported_image.png)
 
 ## 1. 项目配置
 
