@@ -1,14 +1,12 @@
-# ChatGLM-MathV2：前向自动标注与后向评分反馈结合进行计算过程奖励
+# ChatGLM-MathV2：AutomatedLabeling自动化逐步标注人类反馈
 
-大模型在求解数学问题时，给出的回答通常存在各种计算或推理错误。
+大模型在求解数学问题时，给出的回答中一般存在两种潜在的错误类型：计算错误 或者 推理错误。其中计算错误又可细分为计算结果错误 和 计算公式错误。这给用于训练大模型数学能力的数据集构造带来了极大的人工成本。
 
-为了进一步提升大模型求解数学问题的准确性和鲁棒性，本项目通过详尽的pipeline设计，完成了针对大模型数学能力提升用数据集的自动化制备流程。
-
-具体包括三个部分：分别是模型后向评分反馈、模型过程预测标注 和 模型前向自动标注。
+为了解决这一问题，本项目通过详尽的pipeline设计，完成了针对大模型用数据集的自动化逐步标注人类反馈，具体从可行性、完善性、容错性和可迁移性角度进行多次迭代，已经能较好完成人类反馈的去人工自动化标注。
 
 详细pipeline见下图：
 
-![whiteboard_exported_image](png/4.png)
+![whiteboard_exported_image](png/1.png)
 
 ## 1. 项目配置
 
@@ -27,16 +25,16 @@
 不需要考虑其他事情，只需要简单地运行：
 
 ```shell
-python api_both.py
+python api.py
 ```
 
 #### 2.1.1 需要关注的文件
 
-| 文件名称    | 文件说明                                  | 进一步说明 |
-| ----------- | ----------------------------------------- | ---------- |
-| api_both.py | 这是核心文件，可模仿main函数完成api的调用 | 见下       |
-| config.py   | 记录了LLM的API密钥和基本URL               |            |
-| chatglm.py  | chatglm调用文件                           |            |
+| 文件名称   | 文件说明                                  | 进一步说明 |
+| ---------- | ----------------------------------------- | ---------- |
+| api.py     | 这是核心文件，可模仿main函数完成api的调用 | 见下       |
+| config.py  | 记录了LLM的API密钥和基本URL               |            |
+| chatglm.py | chatglm调用文件                           |            |
 
 注意需要设置相应的环境变量：共有两个部分。
 
@@ -84,20 +82,25 @@ python api_both.py
        return response
    ```
 
-在api_both.py的核心函数api中，有一部分可以自适应打开关闭：【可选】
+在api.py的核心函数api中，有一部分可以自适应打开关闭：【可选】
 
 ```
-def api_both(question, response = None, answer = None):
-    ……
+def api(question, solution):
+    data = {"questions": question, "solution": solution}
+    data1 = SplitByRow(data) # 数据分行与公式高亮
+    data2 = IsCalculationOrReasoning(data1) # 判断计算步还是推理步
+    data3 = JudgmentStepCalculatedCorrectly(data2) # 针对计算步的自动标注
+    data4 = JudgmentStepReasoningCorrectly(data3) # 针对推理步的自动标注
+    out_data = data4
 
     # 如果全量输出，则关闭下面一行，否则只输出必要信息【可选】
-    # out_data = postprocess(data4)
+    out_data = postprocess(data4)
 
     # 如果有到导出文件的必要，可打开下面一行【可选】
     out_to_file(out_data)
 
     # 返回处理后的数据
-    return out_data
+    return json.dumps(out_data, ensure_ascii=False)
 ```
 
 #### 2.1.2 字段说明
@@ -106,27 +109,73 @@ def api_both(question, response = None, answer = None):
 
 ```json
 {
-    "question":"问题", # 一个英文字符串
-    "response":"针对问题LLM的响应", # 一个英文字符串（可选）
-    "answer":"针对问题的参考答案" # 一个英文字符串（可选）
+    "questions":"问题", # 一个英文字符串
+    "solution":"求解步骤", # 一个英文字符串
 }
 ```
 
-##### 主要传出字段
+##### 主要传出字段（这里以两部可解问题为例）
+
+当api.py中函数api里out_data = postprocess(data4)被打开时
 
 ```json
 {
-  
+  "questions": "问题描述：提出的问题，需要解决的问题内容。",
+  "solution": {
+    "Step 1": {
+      "content": "步骤内容：对此步骤的描述。",
+      "is_calculation_or_reasoning": "指示该步骤是否涉及计算或逻辑推理（1表示涉及计算，0表示涉及推理）。",
+      "JudgmentStepCalculatedCorrectly": "判断此步骤计算结果是否正确的数组（0代表错误，1代表正确）。",
+      "JudgmentStepEquationCorrectly": "判断此步骤计算公式是否正确的数组（0代表错误，1代表正确）。",
+      "JudgmentStepReasoningCorrectly": "判断此步骤推理是否正确的数值（0代表错误，1代表正确）。",
+      "StepCalculatedCorrectlyResult": "此步骤计算正确的结果。",
+      "StepEquationCorrectlyFormat": "此步骤公式正确的格式。",
+      "StepReasoningCorrectlyResult": "此步骤推理正确的结果。"
+    },
+    "Step 2": {
+      "content": "步骤内容：对此步骤的描述。",
+      "is_calculation_or_reasoning": "指示该步骤是否涉及计算或逻辑推理。",
+      "JudgmentStepCalculatedCorrectly": "判断此步骤计算结果是否正确的数组。",
+      "JudgmentStepEquationCorrectly": "判断此步骤计算公式是否正确的数组。",
+      "JudgmentStepReasoningCorrectly": "判断此步骤推理是否正确的数值。",
+      "StepCalculatedCorrectlyResult": "此步骤计算正确的结果。",
+      "StepEquationCorrectlyFormat": "此步骤公式正确的格式。",
+      "StepReasoningCorrectlyResult": "此步骤推理正确的结果。"
+    }
+  },
+  "modifiedResult": {
+    "Step 1": "修改后的步骤内容：对步骤1的修正描述。",
+    "Step 2": "修改后的步骤内容：对步骤2的修正描述。"
+  }
 }
 ```
 
+* 这里计算结果和计算公式部分之所以是数组，因为一个step中可能存在多个计算公式与对应结果，这里api按顺序依次给出了标签
 
+##### 附加传出字段
 
+当api.py中函数api里out_data = postprocess(data4)被关闭时，输出的json对象会更复杂，包括：
 
-
-
-
-
+- **questions**: 描述了问题的具体内容。
+- **solution**: 包含了解决问题的各个步骤，每个步骤都是一个对象，包含以下字段：
+  - **content**: 描述了该步骤的具体操作内容。
+  - **label**: 人工或者参考标记步骤是否正确（1表示正确）。
+  - **is_calculation_or_reasoning**: 指示该步骤是否涉及计算或逻辑推理（1表示涉及）。
+  - **equation**: 包含了该步骤中使用的数学表达式。
+  - **leftSideOfEqualSign**: 表达式等号左边的内容进行简化和计算的详细过程。
+  - **rightSideOfEqualSign**: 表达式等号右边的内容进行简化和计算的详细过程。
+  - **leftSideOfEqual_use_sympy_or_llm**: 指示等号左侧表达式是否使用了 `sympy`（一种数学表达式处理库）或其他方法进行处理。
+  - **rightSideOfEqual_use_sympy_or_llm**: 指示等号右侧表达式是否使用了 `sympy` 或其他方法进行处理。
+  - **leftSideOfEqual_code**: 如果使用编程代码处理等号左侧表达式，这里会包含相关代码。
+  - **rightSideOfEqual_code**: 如果使用编程代码处理等号右侧表达式，这里会包含相关代码。
+  - **JudgmentStepCalculatedCorrectly**: 数组，判断该步骤的计算是否正确（0表示错误，1表示正确）。
+  - **StepCalculatedCorrectlyResult**: 包含该步骤正确计算的结果。
+  - **JudgmentStepEquationCorrectly**: 数组，判断该步骤的计算公式是否正确设置（0表示错误，1表示正确）。
+  - **StepEquationCorrectlyFormat**: 包含该步骤计算公式正确的格式。
+  - **StepEquationCorrectlyFormatLLMResponse**: 包含对计算公式格式正确性的语言模型回应。
+  - **history_json**: 存储前面步骤的历史记录，便于回溯分析。（这里会对之前的历史步骤按照之前的标签和信息进行正确修正）
+  - **JudgmentStepReasoningCorrectly**: 判断该步骤的逻辑推理是否正确（0表示错误，1表示正确）。
+  - **StepReasoningCorrectlyResult**: 该步骤逻辑推理正确的结果。
 
 ### 2.2 可debug的一般使用方式：结合本地文件系统调用api
 

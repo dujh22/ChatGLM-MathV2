@@ -27,24 +27,36 @@ def query_tgi_completion(prompt):
         config = configs[0]
     else:
         config = configs[1]  # 默认情况下使用第二个配置
-        
-    payload = {  # 定义请求的数据载荷
-        "best_of": 1,  # 指定返回的最佳结果数量为1
-        "decoder_input_details": False,  # 是否返回解码器输入的详细信息
-        "details": False,  # 是否返回额外的详细信息
-        "do_sample": True,  # 启用随机采样生成文本，使输出更加多样
-        "max_new_tokens": 2048,  # 指定生成的最大令牌数量
-        "seed": random.randint(0, 100000),  # 随机种子，用于生成结果的可复现性
-        "temperature": config["temperature"],  # 从选定的配置中获取温度参数
-        "top_p": config["top_p"],  # 从选定的配置中获取top_p参数，控制生成的集中性
-        "stop": ["<|endoftext|>", "<|user|>", "<|observation|>"]  # 设置终止符，这里为空，不指定特定终止符
+
+    messages = f"<|user|>\n{prompt}<|assistant|>\n"  # 将当前的提示追加到消息字符串
+
+    inputs = {  # 创建请求体
+        "inputs": messages,  # 包含历史和当前提示的消息文本
+        "stream": False,  # 不使用流式传输
+        "parameters": {  # 设定生成参数
+            "best_of": 1,  # 生成的最佳答案数量
+            "decoder_input_details": False,  # 是否返回解码器的输入细节
+            "details": False,  # 是否返回详细信息
+            "do_sample": True,  # 是否启用随机采样生成
+            "max_new_tokens": 2048,  # 指定生成的最大令牌数量
+            "seed": random.randint(0, 100000),  # 随机种子，用于生成结果的可复现性
+            "temperature": config["temperature"],  # 从选定的配置中获取温度参数
+            "top_p": config["top_p"],  # 从选定的配置中获取top_p参数，控制生成的集中性
+            "stop": ["<|endoftext|>", "<|user|>", "<|observation|>"]  # 设置停止符号
+        }
     }
-    output = requests.post(url, json=payload, verify=False)  # 发送POST请求到服务器，携带定义好的数据载荷，verify=False表示不验证SSL证书
-    print(output)
+
+    output = requests.post(url, json=inputs, verify=False)  # 发送POST请求到服务器，携带定义好的数据载荷，verify=False表示不验证SSL证书
+    if output.status_code == 200:  # 如果服务器响应状态码为200
+        output = json.loads(output.text)  # 解析响应内容
+        result = output["generated_text"]  # 获取生成的文本
+
+    return result  # 返回生成的文本
 
 
 def split_response(response): # 使用正则表达式按换行符分割响应文本
     steps = re.split(r"\n", response)
+    steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
     return steps
     
 def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code-v3"):
@@ -64,7 +76,10 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
         # 为当前步骤生成指定数量的扩展路径
         for _p in range(num_path):
             _step = "\n".join(steps[:idx+1])  # 将当前步骤之前的所有步骤连接成一个新的查询提示
-            query_prompt = f"\n{prompt}\n{_step}"  # 构造新的查询提示，包括原始提示和当前步骤
+            # query_prompt = f"\n{prompt}\n{_step}"  # 构造新的查询提示，包括原始提示和当前步骤
+            # prompt_temp = "请直接开始继续向后生成推理过程，使用换行符分割，不要输出任何无关内容。 \n"
+            prompt_temp = "Please start directly to continue the backward generative inference process, use line breaks to split, and don't output any extraneous content. \n"
+            query_prompt = f"{prompt}\n{_step}\n\n {prompt_temp}"  # 构造新的查询提示，包括原始提示和当前步骤
             
             result = None  # 初始化结果变量
             for _ in range(3):  # 最多尝试三次获取生成结果
@@ -87,7 +102,7 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
     x["generated_paths"] = output  # 将生成的所有扩展路径存储在输入字典x中的"generated_paths"键下
     return x  # 返回更新后的字典x
 
-def evaluate_process(x, prompt_key="prompt", process_response_key="generated_paths", reference_answewr_key="reference", max_retry=3):
+def evaluate_process(x, prompt_key="prompt", process_response_key="generated_paths", reference_answewr_key="reference", max_retry=3, backbone="chatglm_platform", PROMPT_TEMPLATE=None):
     '''
         该功能通过使用批判函数根据参考答案对每个回复步骤进行评分来评估生成文本路径的质量，通常用于评估数学问题或类似内容，其正确性可以客观判断。它根据分数计算软标签和硬标签，其中软标签是二进制结果（分数高于阈值）的平均值，而硬标签则表示大部分分数是否通过了阈值。这种评估在教育软件、自动辅导系统或其他需要对生成的回复进行反馈的应用中特别有用。
     '''
@@ -107,28 +122,32 @@ def evaluate_process(x, prompt_key="prompt", process_response_key="generated_pat
             }
             result = critic_math_problem(  # 调用批评函数对每个响应进行评分
                 temp_item,
-                backbone="chatglm_platform",  # 指定使用的模型后端
+                backbone=backbone,  # 指定使用的模型后端
                 prompt_key=prompt_key,
                 response_key="response",
-                reference_key=reference_answewr_key
+                reference_key=reference_answewr_key,
+                PROMPT_TEMPLATE=PROMPT_TEMPLATE
             )
             rating = result["critic_result"][0]["rating"]  # 从结果中获取评分
             ratings.append(rating)  # 将评分添加到评分列表
 
+        ratings = [float(item) for item in ratings] # 将字符串转为数字
         path["ratings"] = ratings  # 将评分列表存储在路径信息中
         ratings_binary = [1 if x >= 8 else 0 for x in ratings]  # 将评分转换为二进制标签（8分以上为1，否则为0）
         path["soft_label"] = sum(ratings_binary) / len(ratings_binary)  # 计算软标签，即平均值
         path["hard_label"] = 1 if path["soft_label"] >= 0.5 else 0  # 根据软标签计算硬标签，平均值大于等于0.5则为1，否则为0
 
     x[process_response_key] = generated_paths  # 将更新后的生成路径存回字典x
+
     return x  # 返回更新后的字典x
 
-def select_math_data_by_rating(input_file):
+def select_math_data_by_rating(input_file, output_file):
     '''
         该函数处理一组数学问题（或其他类似的评价任务），根据评分选择或过滤这些问题。它支持以文件路径或直接以数据形式输入。该函数根据给定的下限计算每个项目的平均分数和通过率，并用计算出的分数和选择指标更新每个项目。在需要自动评分和反馈以评估和改进学习材料或算法的教育或测试环境中，这一过程尤其有用。
     '''
     if isinstance(input_file, str):  # 检查输入是否为字符串类型的文件路径
-        data = [json.loads(x) for x in open(input_file)]  # 从文件读取每行并解析为JSON对象
+        data = [json.loads(x) for x in open(input_file, 'r', encoding='utf-8')]  
+        # 从文件读取每行并解析为JSON对象
     else:
         data = input_file  # 如果不是字符串，假设输入已经是数据列表
 
@@ -138,11 +157,21 @@ def select_math_data_by_rating(input_file):
         return avg_score, sum(above_bound) / len(above_bound)  # 返回平均分和超过阈值的比例
     
     def func(x, lower_bound=8):
-        results = x["critic_result"]  # 从每个样本中获取评价结果
-        if len(results) == 0:
-            return None  # 如果没有评价结果，则返回None
-        ratings = [item["rating"] for item in results if isinstance(item["rating"], str)]  # 提取所有评分，确保评分是字符串格式
-        ratings = [float(x) for x in ratings]  # 将所有评分转换为浮点数
+
+        # results = x["critic_result"]  # 从每个样本中获取评价结果
+        # if len(results) == 0:
+        #     return None  # 如果没有评价结果，则返回None
+        # ratings = [item["rating"] for item in results if isinstance(item["rating"], str)]  # 提取所有评分，确保评分是字符串格式
+        # ratings = [float(x) for x in ratings]  # 将所有评分转换为浮点数
+
+         # 从每个样本中获取评价结果
+        ratings = []
+        for item1 in x['generated_paths']:
+            for item2 in item1['ratings']:
+                ratings.append(item2)
+        if len(ratings) == 0:
+            return None # 如果没有评价结果，则返回None
+
         avg_score, pass_rate = judge_scores(ratings, lower_bound=lower_bound)  # 调用judge_scores计算平均分和通过率
         x["critic_scores"] = {  # 将计算结果存回样本中
             "ratings": ratings,
@@ -152,29 +181,69 @@ def select_math_data_by_rating(input_file):
         return x
     
     processed = [func(x) for x in data if x is not None]  # 处理数据集中的每个样本，并排除None值
+
+    with open(output_file, 'w', encoding='utf-8') as w:  # 以写入模式打开输出文件
+        for item in processed:  # 遍历处理后的数据列表
+            w.write(json.dumps(item, ensure_ascii=False) + '\n')  # 将每个样本写入文件，并添加换行符
+
     return processed  # 返回处理后的数据列表
 
+def select_math_data_by_rating2(data):
+    '''
+        该函数处理一组数学问题（或其他类似的评价任务），根据评分选择或过滤这些问题。它支持以文件路径或直接以数据形式输入。该函数根据给定的下限计算每个项目的平均分数和通过率，并用计算出的分数和选择指标更新每个项目。在需要自动评分和反馈以评估和改进学习材料或算法的教育或测试环境中，这一过程尤其有用。
+    '''
+    def judge_scores(scores, lower_bound=7):
+        avg_score = sum(scores) / len(scores)  # 计算所有评分的平均值
+        above_bound = [1 if x >= lower_bound else 0 for x in scores]  # 生成一个列表，评分高于阈值的为1，否则为0
+        return avg_score, sum(above_bound) / len(above_bound)  # 返回平均分和超过阈值的比例
+    
+    def func(x, lower_bound=8):
+        # 从每个样本中获取评价结果
+        ratings = []
+        for item1 in x['generated_paths']:
+            for item2 in item1['ratings']:
+                ratings.append(item2)
+        if len(ratings) == 0:
+            return None # 如果没有评价结果，则返回None
+
+        avg_score, pass_rate = judge_scores(ratings, lower_bound=lower_bound)  # 调用judge_scores计算平均分和通过率
+        x["critic_scores"] = {  # 将计算结果存回样本中
+            "ratings": ratings,
+            "avg_score": avg_score,
+            "pass_rate": pass_rate
+        }
+        return x
+    
+    x = func(data) # 处理数据集中的每个样本，并排除None值
+
+    return x  # 返回处理后的数据列表
 
 def main():
     code_test = True # 是否为代码测试
     if code_test == False:
+        prompt_template_path = None
         input_file_path = None
         prompt_key = None
         response_key = "generation"
         reference_key = "answer"
         backbone = "gpt-3.5-turbo"
         mode = "response"
+        process_response_key = "generated_paths"
+        reference_answewr_key = "reference"
     else:
+        prompt_template_path = 'F://code//github//ChatGLM-MathV2//shepherd_prm//templates//criticllm_math_template.txt'
         prompt_key = "question"
         response_key = "response"
         reference_key = "solution"
         # 下面三个参数需要根据mode动态调整
-        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi.jsonl"
         # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi.jsonl"
-        backbone = "tgi" # generate用tgi，critic用chatglm_platform
-        # backbone = "chatglm_platform"
-        mode = "generation"
-        # mode = "critic"
+        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi_path.jsonl"
+        # backbone = "tgi" # generate用tgi，critic用chatglm_platform
+        backbone = "chatglm_platform"
+        # mode = "generation"
+        mode = "critic"
+        process_response_key = "generated_paths"
+        reference_answewr_key = "solution"
 
     # 创建命令行解析器
     parser = argparse.ArgumentParser()
@@ -186,8 +255,12 @@ def main():
     # "gpt-4-1106-preview"  # 注释中提及可能使用的模型版本
     parser.add_argument("--skip_response", action="store_true", default=False)  # 是否跳过响应生成
     parser.add_argument("--skip_generated", action="store_true", default=False)  # 是否跳过已生成的响应
+    parser.add_argument("--prompt_template", type=str, default=prompt_template_path)  # 添加提示模板的命令行参数
     parser.add_argument("--reference_key", type=str, default=reference_key)  # 指定参考答案键名
+    parser.add_argument("--reference_answewr_key", type=str, default=reference_answewr_key)  # 指定参考答案键名
     parser.add_argument("--response_key", type=str, default=response_key)  # 指定响应键名
+    args = parser.parse_args()  # 解析命令行参数
+    parser.add_argument("--process_response_key", type=str, default=process_response_key)  # 指定响应键名
     args = parser.parse_args()  # 解析命令行参数
     
     # 根据指定的模式进行相应的操作
@@ -203,18 +276,26 @@ def main():
             is_glm=False  # 指定是否使用GLM模型
         )
     elif args.mode == "critic":
+        PROMPT_TEMPLATE = prepare_template(args.prompt_template)  # 准备提示模板
+
         build_training_file(
             input_file=args.input_file,  # 输入文件
             output_file=args.input_file.replace(".jsonl", "_math_critic.jsonl"),  # 输出文件路径
             worker_func=partial(
-                critic_math_problem,  # 指定工作函数
+                evaluate_process,  # 指定工作函数
                 backbone=args.backbone,  # 传递模型参数
                 prompt_key=args.prompt_key,  # 传递prompt_key参数
-                response_key=args.response_key,  # 传递response_key参数
-                reference_key=args.reference_key
+                process_response_key=args.process_response_key,  # 传递response_key参数
+                reference_answewr_key=args.reference_answewr_key,
+                PROMPT_TEMPLATE = PROMPT_TEMPLATE
             ),  # 传递reference_key参数
             is_glm=False  # 指定是否使用GLM模型
         )
+
+        select_math_data_by_rating(
+            input_file=args.input_file.replace(".jsonl", "_math_critic.jsonl"),
+            output_file=args.input_file.replace(".jsonl", "_math_critic2.jsonl")
+        )  # 选择评分数据
 
 
 if __name__ == "__main__":
