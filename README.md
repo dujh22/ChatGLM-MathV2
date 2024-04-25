@@ -114,115 +114,91 @@ def api_both(question, response = None, answer = None):
 
 ##### 主要传出字段
 
-```json
-{
-  
-}
-```
+以json格式输出，其中：
 
+1. `questions`：包含具体问题的文本。这通常是用户提出的一个具体的查询或任务，这里以数学问题为主。
 
+2. `response`：对问题LLM的详细回答。这个回答包含了解决问题的步骤、计算和推理过程。
 
+3. `answer`：问题的参考答案。在这个上下文中，可能是空的，表示没有单独的参考答案提供。
 
+4. `critic_result`：这是一个数组，包含对响应的评价和分析。
 
+   - `response`：重复问题的回答。
 
+   - `rating`：给回答的评分，通常是一个数字。
 
+   - `judge_result`：评价回答的文本，详细说明了为何给出该评分。
 
+5. `generated_paths`：这是一个数组，展示了生成答案的不同可能的路径或方法。
 
-### 2.2 可debug的一般使用方式：结合本地文件系统调用api
+   - `step`：描述生成步骤的文本。
+
+   - `extension`：该步骤的不同扩展路径实现方式或详细解释。
+
+   - `ratings`：对每个扩展给出的评分。
+
+   - `soft_label`：软标签，通常用于表示分类的不确定性。
+
+   - `hard_label`：硬标签，通常是一个确定的分类标签。
+
+6. `critic_scores`：总结了批评结果的评分。
+
+   - `ratings`：所有评分的列表。
+
+   - `avg_score`：平均评分。
+
+   - `pass_rate`：通过率，表示有多少比例的评分是积极的。
+
+7. `solution`：这是一个对象，详细描述了解决问题的每个步骤。
+
+   - `Step 1`，`Step 2`等：每个步骤的详细信息，包括内容描述、是否涉及计算或推理、相关的数学方程等。
+
+   - `content`：步骤的描述。
+
+   - `label`：步骤的分类标签。
+
+   - `is_calculation_or_reasoning`：表示步骤是否涉及计算或推理。
+
+   - `equation`：步骤中使用的数学方程。
+
+   - `leftSideOfEqualSign`和`rightSideOfEqualSign`：方程等号左边和右边的计算过程。
+
+   - `history_json`：记录了到达当前步骤的历史路径。
+   - 其他更细粒度的标签，参照 [ChatGLM-MathV2：AutomatedLabeling自动化逐步标注人类反馈](./README2.md)
+
+这些键合起来构成了一个结构化的方式来描述和评估一个问题的解决方案及其有效性。
+
+### 2.2 模块化使用
+
+如果针对当前提供的三个模块（模型后向评分反馈、模型过程预测标注 和 模型前向自动标注）希望单独使用或者独立组合使用，请关注这一部分。
+
+我们首先对本项目涉及到的三个模块进行细粒度说明：
+
+![](png/5.png)
+
+针对 模型后向评分反馈、模型过程预测标注，请跳转至  [math-feedback数学反馈](./shepherd_prm/readme.md)
+
+针对 模型前向自动标注，请跳转至  [ChatGLM-MathV2：AutomatedLabeling自动化逐步标注人类反馈](./README2.md)
+
+####  2.2.1 需要关注的文件
+
+| 文件名称     | 文件说明                                            | 进一步说明                                                   |
+| ------------ | --------------------------------------------------- | ------------------------------------------------------------ |
+| api_front.py | 这是模型后向评分反馈、模型过程预测标注模块的api实现 | [math-feedback数学反馈](./shepherd_prm/readme.md)            |
+| api.py       | 这是模型前向自动标注模块的api实现                   | [ChatGLM-MathV2：AutomatedLabeling自动化逐步标注人类反馈](./README2.md) |
+
+### 2.3 可debug的一般使用方式：结合本地文件系统调用api
 
 如果希望对中间过程进行输出，并进行全面跟踪，推荐这种方式
 
 ```shell
-python pipeline_function.py
+python pipeline_function_both.py
 ```
 
 #### 2.2.1 需要关注的文件
 
-| 文件名称                                 | 文件说明                                                     | 进一步说明 |
-| ---------------------------------------- | ------------------------------------------------------------ | ---------- |
-| pipeline_function.py                     | 这是核心文件，main函数中可选择采用api还是pipeline的形式，2.2节指这里采用api的形式 | 见下       |
-| Step1_SplitByRow.py                      | 步骤一：数据按行拆分为步，识别计算公式（注意，如果针对对应的数据集，建议实现对应的预处理脚本，比如Step1_SplitByRow_forMathShepherd.py就是针对MathShepherd数据集的进一步实现） |            |
-| Step2_IsCalculationOrReasoning.py        | 步骤二：判断单步是计算步还是推理步                           |            |
-| Step3_JudgmentStepCalculatedCorrectly.py | 步骤三：针对计算步进行详细自动化标注                         |            |
-| Step4_JudgmentStepReasoningCorrectly.py  | 步骤四：针对推理步进行详细自动化标注                         |            |
-| Check1_JsonlVisualization.py             | Step3&4支撑性文件，用于针对jsonl输出可视化为csv格式          |            |
-| Check2_CalculateAccuracy.py              | Step4支撑性文件，用于计算自动标注的ACC准确率                 |            |
-
-#### 2.2.2 具体流程说明
-
-所有流程的中间结果会存在本项目所在文件夹下的data和raw_data子文件夹中，可进行具体查看，方便debug和Acc计算比较
-
-##### 2.2.2.1 步骤一：数据按行拆分为步，识别计算公式
-
-这里值得说明的是，Step1_SplitByRow.py只提供了基础的数据拆分原则：比如按照句号或者换行符。针对具体的数据集，需要更具体的实现，比如Step1_SplitByRow_forMathShepherd.py就是针对MathShepherd数据集的进一步实现
-
-##### 2.2.2.1 步骤二：判断单步是计算步还是推理步
-
-判断单步是包括计算公式的计算步骤还是不包括计算公式的推理步骤
-
-##### 2.2.2.1 步骤三：针对计算步进行详细自动化标注
-
-这里会对每一个计算步进行详细的标注，Check1_JsonlVisualization.py支持对标注结果进行二维横纵向对比
-
-##### 2.2.2.1 针对推理步进行详细自动化标注
-
-这里会对每一个推理步进行详细的标注，Check2_CalculateAccuracy.py支持输出最终的Acc准确性结果
-
-### 2.3 推荐方式：并发pipeline
-
-如果希望全面使用该项目算法，优化加速整体调用流程，推荐这种方式
-
-如果希望对中间过程进行输出，并进行全面跟踪，推荐这种方式
-
-```shell
-python pipeline_function.py
-```
-
-#### 2.3.1 需要关注的文件
-
-| 文件名称                        | 文件说明                                                     | 进一步说明 |
-| ------------------------------- | ------------------------------------------------------------ | ---------- |
-| pipeline_function.py            | 这是核心文件，main函数中可选择采用api还是pipeline的形式，2.3节指这里采用pipeline的形式 | 见下       |
-| data_download.py                | Step1支撑性文件，数据集下载脚本，用于针对data_urls.txt中给定的huggingface上数据集进行自动化下载 |            |
-| get_data_for_codeTest.py        | Step1支撑性文件，小样本处理脚本，用于简化数据集大小，输出更小的数据集，方便进行项目的代码测试 |            |
-| highlight_equations.py          | Step3支撑性文件，公式高亮脚本，用于识别步骤中的潜在公式      |            |
-| run_python_func.py              | Step3支撑性文件，python代码自动化运行脚本，用于运行python代码 |            |
-| use_gpt_api_for_glm_generate.py | Step3&4支撑性文件，用于调用GPT进行数据标注与校验             |            |
-
-#### 2.3.2 具体流程说明（对2.2.2的补充）
-
-##### 2.3.2.1 数据集的下载
-
-* 如果有数据集下载需要，https://pypi.org/project/pycrawlers/ 下载后将其中pycrawlers放到代码同一级目录下（本项目已经包含这一文件夹，可以不二次执行）
-* 参照data_urls.txt进行修改
-* 多次运行 `python data_download.py`
-
-##### 2.3.2.2 针对Step3&4的并发实现
-
-在非API调用的情景下，默认step3和step4会采用并发完成，目前并发参数max_workers设置为10，可在脚本中找到相应位置进行设置
-
-```python
-def process_jsonl_file_concurrent(source_path, dest_path):
-    # 读取文件的所有行
-    with open(source_path, 'r', encoding='utf-8') as file:
-        lines = file.readlines()
-
-    results = []
-
-    # 使用 ThreadPoolExecutor 来并发处理每一行
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        # 提交所有行到线程池
-        future_to_line = {executor.submit(process_line, line): line for line in tqdm(lines, desc='Processing')}
-
-        # 使用tqdm创建进度条
-        with tqdm(total=len(future_to_line), desc='Processing lines') as progress:
-            # 收集处理结果
-            for future in concurrent.futures.as_completed(future_to_line):
-                results.append(future.result())
-                progress.update(1)  # 更新进度条
-
-    # 写入结果到目标文件
-    with open(dest_path, 'w', encoding='utf-8') as file:
-        file.writelines(results)
-```
-
+| 文件名称                  | 文件说明                                                     |
+| ------------------------- | ------------------------------------------------------------ |
+| pipeline_function_both.py | 这是包含三个模块pipeline的核心文件，main函数中可选择采用api还是pipeline的形式 |
+| pipeline_function.py      | 这是只包含前向自动标注pipeline的核心文件，main函数中可选择采用api还是pipeline的形式 |
