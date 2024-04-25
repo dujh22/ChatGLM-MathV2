@@ -202,3 +202,22 @@ python pipeline_function_both.py
 | ------------------------- | ------------------------------------------------------------ |
 | pipeline_function_both.py | 这是包含三个模块pipeline的核心文件，main函数中可选择采用api还是pipeline的形式 |
 | pipeline_function.py      | 这是只包含前向自动标注pipeline的核心文件，main函数中可选择采用api还是pipeline的形式 |
+
+## 引用
+
+请根据您使用和引用的内容考虑引用以下内容：
+
+- 代码： alpaca_eval（本软件仓库）。
+
+以下是 bibtex 条目：
+
+```
+@misc{du2024chatglmmathv2,
+  author = {Jinhua Du and Zhenyu Hou},
+  title = {ChatGLM-MathV2: Forward automatic labeling combined with backward scoring feedback for computational process rewarding},
+  year = {2024},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/dujh22/ChatGLM-MathV2}}
+}
+```
