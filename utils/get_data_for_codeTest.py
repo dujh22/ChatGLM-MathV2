@@ -4,7 +4,7 @@
 import os
 import json
 
-def get_data_for_codeTest(folder_path, new_folder_suffix='_for_codeTest', num_points=10):
+def get_data_for_codeTest(folder_path, new_folder_suffix='_for_codeTest', num_points=100):
     # 确定新文件夹的路径
     base_folder_path = os.path.dirname(folder_path)
     new_folder_path = os.path.join(base_folder_path, os.path.basename(folder_path) + new_folder_suffix)

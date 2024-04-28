@@ -203,7 +203,132 @@ python pipeline_function_both.py
 | pipeline_function_both.py | 这是包含三个模块pipeline的核心文件，main函数中可选择采用api还是pipeline的形式 |
 | pipeline_function.py      | 这是只包含前向自动标注pipeline的核心文件，main函数中可选择采用api还是pipeline的形式 |
 
-## 引用
+这里pipeline_function.py的具体说明详见  [ChatGLM-MathV2：AutomatedLabeling自动化逐步标注人类反馈](./README2.md)，这里针对pipeline_function_both.py做进一步的说明：
+
+```python
+def pipeline_file():
+    ……
+    prompt_template_path = 'F://code//github//ChatGLM-MathV2//shepherd_prm//templates//criticllm_math_template.txt' # 这里用于设置结果评估prompt所在的路径
+    ……
+    input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0.jsonl" # 这里用于设置最开始处理的文件路径
+    ……
+    # step 5：前向实际路径自动标注
+    is_test = True # 小样本开关：如果为True，则只处理少量数据，如果为False，则处理全量数据
+```
+
+## 2.4 并发执行文件批处理
+
+如果是针对多条数据，建议采用批处理方式，本项目对批处理进行了有效支持，具体运行过程如下：
+
+### 2.4.1 后向生成结果
+
+> shepherd_prm/query_api.py
+
+首先修改相关参数：在main函数中
+
+```python
+backbone = "tgi" # generate用tgi，critic用chatglm_platform
+input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100.jsonl" # 这个是原始文件所在位置
+mode = "response"
+# backbone = "chatglm_platform"
+# input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl"
+# mode = "critic"
+```
+
+然后运行
+
+```shell
+cd ./shepherd_prm
+python query_api.py
+```
+
+### 2.4.2 后向结果评分反馈
+
+> shepherd_prm/query_api.py
+
+首先修改相关参数：在main函数中
+
+```python
+# backbone = "tgi" 
+# input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl" # 注意修改，是2.4.1的_tgi
+# mode = "response"
+backbone = "chatglm_platform"
+input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl"
+mode = "critic"
+```
+
+然后运行
+
+```shell
+python query_api.py
+```
+
+### 2.4.3 前向过程路径预测
+
+> shepherd_prm/prm_evaluate_process.py
+
+首先修改相关参数：在main函数中
+
+```python
+backbone = "tgi" 
+input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic.jsonl" # 注意修改，是2.4.2的_math_critic
+mode = "generation"
+# backbone = "chatglm_platform"
+# input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path.jsonl"
+# mode = "critic"
+```
+
+然后运行
+
+```shell
+python prm_evaluate_process.py
+```
+
+### 2.4.4 前向过程路径评估与评估结果汇总
+
+> shepherd_prm/api_front_time.py
+
+首先修改相关参数：在main函数中
+
+```python
+# backbone = "tgi" 
+# input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic.jsonl" 
+# mode = "generation"
+backbone = "chatglm_platform"
+input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path.jsonl" # 注意修改，是2.4.3的_path
+mode = "critic"
+```
+
+然后运行
+
+```shell
+python prm_evaluate_process.py
+```
+
+最终2.4.1-2.4.4的运行结果在 F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2.jsonl
+
+
+
+## 3. 辅助函数说明
+
+主要分步在几个子文件内：
+
+### 3.1 utils
+
+该文件夹内是一些工具性质的脚本：
+
+1. get_data_for_codeTest.py用户从大数据中获得小批量数据
+1. make_test_data.py用于从math_shepherd数据集转化获得原始测试数据集
+1. path_conversion.py用于路径转换
+1. pipelineForDataAnnotation.py 用于针对中文数据集进行response分步和步规约（如果超过10步规约回10步内）
+1. judge_data_duplicates_and_languageStats.py：处理文件夹中的所有jsonl文件，查重并分析语言
+1. math_chatglm_raw_data_standard.py：math_chatglm_raw_data数据集标准化
+
+### 3.2 llm
+
+该文件夹内是一些大模型接口调用相关的脚本
+
+## 4. 引用
 
 请根据您使用和引用的内容考虑引用以下内容：
 

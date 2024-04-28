@@ -1,3 +1,22 @@
+# 如果打开下面一行，命令行会自动输出代码执行的时间
+import time
+# 这个装饰器 time_it 可以被应用到任何你希望测量执行时间的函数上。它通过计算函数开始和结束时的时间来计算执行时间，并将时间转换为小时、分钟和秒的格式。
+def time_it(func):
+    """
+    装饰器，用于测量函数执行时间。
+    """
+    def wrapper(*args, **kwargs):
+        start_time = time.time()  # 获取开始时间
+        result = func(*args, **kwargs)  # 执行函数
+        end_time = time.time()  # 获取结束时间
+        time_taken = end_time - start_time  # 计算耗时
+        hours, rem = divmod(time_taken, 3600)
+        minutes, seconds = divmod(rem, 60)
+        print(f"{func.__name__} executed in: {int(hours):02d}h:{int(minutes):02d}m:{seconds:06.3f}s")
+        return result
+    return wrapper
+
+
 import os
 import json
 import re
@@ -146,6 +165,7 @@ def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, star
             # 计算acc
             Check2_CalculateAccuracy(save_file_name)
 
+@time_it
 def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
     
     print("Step4: 判断步骤是否推理正确……")

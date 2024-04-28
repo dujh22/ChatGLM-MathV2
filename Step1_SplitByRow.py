@@ -2,7 +2,26 @@ import json
 import os
 import re
 from tqdm import tqdm
-from highlight_equations import highlight_equations
+from utils.highlight_equations import highlight_equations
+
+
+def split_response(response): # 使用正则表达式按换行符分割响应文本
+    # 首先判断\n\n存在的数量，如果超过超过一个则按照这个划分
+    if response.count('\n\n') >= 2:
+        steps = re.split(r"\n\n", response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
+    # 然后判断\n存在的数量，如果超过一个则按照这个划分
+    if response.count('\n') >= 2:
+        steps = re.split(r"\n", response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
+    # 否则按照句号划分
+    else:
+        # 使用正则表达式按句号切割非小数点
+        steps = re.split(r'(?<=[^.0-9])\.(?=[^0-9])', response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
 
 def process_json_line(line):
     # 加载原始JSON
@@ -15,23 +34,15 @@ def process_json_line(line):
         "dataset": data["dataset"],
     }
 
-    # 判断solution中的换行符数量
-    newline_count = data['solution'].count('\n')
-
-    if newline_count >= 2:
-        # 如果不少于2个换行符，按照换行符切割
-        solutions = data['solution'].split('\n')
-    else:
-        # 否则，使用正则表达式按句号切割非小数点
-        solutions = re.split(r'(?<=[^.0-9])\.(?=[^0-9])', data['solution'])
+    # 方案拆分
+    split_responses = split_response(data['solution'])
 
     # 处理每个解决方案部分
-    for i, solution in enumerate(solutions):
-        if solution.strip():  # 确保切割后的文本不为空
-            new_json["solution"][f"Step {i+1}"] = {
-                "content": solution.strip(),
-                "label": 1  # 默认标签为1
-            }
+    for i, solution in enumerate(split_responses):
+        new_json["solution"][f"Step {i+1}"] = {
+            "content": solution.strip(),
+            "label": 1  # 默认标签为1
+        }
 
     # 处理每个解决方案部分的数学公式高亮
     for step, info in new_json["solution"].items():

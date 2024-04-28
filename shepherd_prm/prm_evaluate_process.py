@@ -1,3 +1,21 @@
+# 如果打开下面一行，命令行会自动输出代码执行的时间
+import time
+# 这个装饰器 time_it 可以被应用到任何你希望测量执行时间的函数上。它通过计算函数开始和结束时的时间来计算执行时间，并将时间转换为小时、分钟和秒的格式。
+def time_it(func):
+    """
+    装饰器，用于测量函数执行时间。
+    """
+    def wrapper(*args, **kwargs):
+        start_time = time.time()  # 获取开始时间
+        result = func(*args, **kwargs)  # 执行函数
+        end_time = time.time()  # 获取结束时间
+        time_taken = end_time - start_time  # 计算耗时
+        hours, rem = divmod(time_taken, 3600)
+        minutes, seconds = divmod(rem, 60)
+        print(f"{func.__name__} executed in: {int(hours):02d}h:{int(minutes):02d}m:{seconds:06.3f}s")
+        return result
+    return wrapper
+
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -53,12 +71,25 @@ def query_tgi_completion(prompt):
 
     return result  # 返回生成的文本
 
-
 def split_response(response): # 使用正则表达式按换行符分割响应文本
-    steps = re.split(r"\n", response)
-    steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
-    return steps
-    
+    # 首先判断\n\n存在的数量，如果超过超过一个则按照这个划分
+    if response.count('\n\n') >= 2:
+        steps = re.split(r"\n\n", response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
+    # 然后判断\n存在的数量，如果超过一个则按照这个划分
+    if response.count('\n') >= 2:
+        steps = re.split(r"\n", response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
+    # 否则按照句号划分
+    else:
+        # 使用正则表达式按句号切割非小数点
+        steps = re.split(r'(?<=[^.0-9])\.(?=[^0-9])', response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
+
+@time_it   
 def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code-v3"):
     '''
         该函数处理包含提示和响应详细信息的给定字典 x，为响应的每个步骤生成扩展路径。它使用辅助函数 query_tgi_completion，尝试生成扩展路径，每一步最多可生成三次，以确保稳健的错误处理和重试机制。这种方法适用于需要根据先前步骤顺序生成内容的场景，例如为机器学习模型或自动应答系统创建训练数据。
@@ -102,6 +133,7 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
     x["generated_paths"] = output  # 将生成的所有扩展路径存储在输入字典x中的"generated_paths"键下
     return x  # 返回更新后的字典x
 
+@time_it
 def evaluate_process(x, prompt_key="prompt", process_response_key="generated_paths", reference_answewr_key="reference", max_retry=3, backbone="chatglm_platform", PROMPT_TEMPLATE=None):
     '''
         该功能通过使用批判函数根据参考答案对每个回复步骤进行评分来评估生成文本路径的质量，通常用于评估数学问题或类似内容，其正确性可以客观判断。它根据分数计算软标签和硬标签，其中软标签是二进制结果（分数高于阈值）的平均值，而硬标签则表示大部分分数是否通过了阈值。这种评估在教育软件、自动辅导系统或其他需要对生成的回复进行反馈的应用中特别有用。
@@ -235,15 +267,20 @@ def main():
         prompt_key = "question"
         response_key = "response"
         reference_key = "solution"
-        # 下面三个参数需要根据mode动态调整
-        # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi.jsonl"
-        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi_path.jsonl"
-        # backbone = "tgi" # generate用tgi，critic用chatglm_platform
-        backbone = "chatglm_platform"
-        # mode = "generation"
-        mode = "critic"
         process_response_key = "generated_paths"
         reference_answewr_key = "solution"
+        # 下面三个参数需要根据mode动态调整
+
+        # 如果是生成模式
+        backbone = "tgi" # generate用tgi，critic用chatglm_platform
+        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic.jsonl"
+        mode = "generation"
+
+        # 如果是评估模式
+        # backbone = "chatglm_platform"
+        # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path.jsonl"
+        # mode = "critic"
+
 
     # 创建命令行解析器
     parser = argparse.ArgumentParser()

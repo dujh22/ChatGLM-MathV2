@@ -42,8 +42,8 @@ def process_jsonl_file(input_file_path, output_file_path):
             outfile.write('\n')  # 确保每个条目在新的一行
 
 # 指定输入和输出文件路径
-input_file_path = 'F://code//github//ChatGLM-MathV2//raw_data//test_data//test_data.jsonl'
-output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data//test_data.jsonl'
+input_file_path = 'F://code//github//ChatGLM-MathV2//raw_data//peiyi9979_Math_Shepherd_for_codeTest\math-shepherd1-100.jsonl'
+output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100.jsonl'
 
 # 调用函数
 process_jsonl_file(input_file_path, output_file_path)

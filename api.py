@@ -107,9 +107,22 @@ def highlight_equations(text):
     return ' '.join(result)
 
 def split_response(response): # 使用正则表达式按换行符分割响应文本
-    steps = re.split(r"\n", response)
-    steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
-    return steps
+    # 首先判断\n\n存在的数量，如果超过超过一个则按照这个划分
+    if response.count('\n\n') >= 2:
+        steps = re.split(r"\n\n", response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
+    # 然后判断\n存在的数量，如果超过一个则按照这个划分
+    if response.count('\n') >= 2:
+        steps = re.split(r"\n", response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
+    # 否则按照句号划分
+    else:
+        # 使用正则表达式按句号切割非小数点
+        steps = re.split(r'(?<=[^.0-9])\.(?=[^0-9])', response)
+        steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
+        return steps
 
 def SplitByRow(data):
     # 初始化新的JSON格式
@@ -118,15 +131,8 @@ def SplitByRow(data):
         "solution": {},
     }
 
-    # 判断solution中的换行符数量
-    newline_count = data['solution'].count('\n')
-
-    if newline_count >= 2:
-        # 如果不少于2个换行符，按照换行符切割
-        solutions = split_response(data['solution'])
-    else:
-        # 否则，使用正则表达式按句号切割非小数点
-        solutions = re.split(r'(?<=[^.0-9])\.(?=[^0-9])', data['solution'])
+    # 切分成独立的步骤
+    solutions = split_response(data['solution'])
 
     # 处理每个解决方案部分
     for i, solution in enumerate(solutions):
@@ -499,6 +505,8 @@ def check_calculation(info, question, history):
             if correct_expr != "ERROR: LLM cannot correct the formula":
                 # 使用 sympy 计算表达式的结果
                 actual_result, use_sympy_or_llm1, intermediate_process1, code1 = get_sympy_calculate_result(correct_expr, question, input_str, history)
+            else:
+                actual_result, use_sympy_or_llm1, intermediate_process1, code1 = "ERROR: LLM cannot correct the formula", "sympy and llm", "ERROR: LLM cannot correct the formula", "ERROR: LLM cannot correct the formula"
 
             info['leftSideOfEqualSign'].append(intermediate_process1) # 如果不是正确的计算表达式，那么左边和右边的表达式都是空的,这两个位置是记录公式推导过程的
             info['rightSideOfEqualSign'].append("")

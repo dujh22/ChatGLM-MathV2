@@ -1,9 +1,30 @@
+# 如果打开下面一行，命令行会自动输出代码执行的时间
+import time
+# 这个装饰器 time_it 可以被应用到任何你希望测量执行时间的函数上。它通过计算函数开始和结束时的时间来计算执行时间，并将时间转换为小时、分钟和秒的格式。
+def time_it(func):
+    """
+    装饰器，用于测量函数执行时间。
+    """
+    def wrapper(*args, **kwargs):
+        start_time = time.time()  # 获取开始时间
+        result = func(*args, **kwargs)  # 执行函数
+        end_time = time.time()  # 获取结束时间
+        time_taken = end_time - start_time  # 计算耗时
+        hours, rem = divmod(time_taken, 3600)
+        minutes, seconds = divmod(rem, 60)
+        print(f"{func.__name__} executed in: {int(hours):02d}h:{int(minutes):02d}m:{seconds:06.3f}s")
+        return result
+    return wrapper
+
+# import hunter # 用于调试
+# hunter.trace(module=__name__)
+
 # 计算单步
 
 import os
 import json
 import re
-from get_data_for_codeTest import get_data_for_codeTest
+from utils.get_data_for_codeTest import get_data_for_codeTest
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
 from Check1_JsonlVisualization import Check1_JsonlVisualization
@@ -15,32 +36,8 @@ from concurrent.futures import ThreadPoolExecutor
 import concurrent.futures
 import time
 import logging
-import hunter # 用于调试
 
-hunter.trace(module=__name__)
-
-
-from use_gpt_api_for_glm_generate import gpt_generate
-from chatglm import ChatGLM
-ChatGLM = ChatGLM()
-
-# 这里设置使用的llm进行生成，注意在本项目中只有这里一个地方进行相关设置
-def llm_response(prompt, use_glm_or_gpt = 'glm'):
-    response = "ERROR for LLM"
-    for i in range(10):
-        if use_glm_or_gpt == 'glm':
-            try:
-                response = ChatGLM.generate(prompt)
-                return response
-            except:
-                continue
-        else:
-            try:
-                response = gpt_generate(prompt)
-                return response
-            except:
-                continue
-    return response
+from llm.llm_response import llm_response
 
 # 配置日志记录器
 logging.basicConfig(filename='Step3_JudgmentStepCalculatedCorrectly.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -383,6 +380,9 @@ def check_calculation(info, question, history):
             if correct_expr != "ERROR: LLM cannot correct the formula":
                 # 使用 sympy 计算表达式的结果
                 actual_result, use_sympy_or_llm1, intermediate_process1, code1 = get_sympy_calculate_result(correct_expr, question, input_str, history)
+            else:
+                # actual_result, use_sympy_or_llm1, intermediate_process1, code1 = get_sympy_calculate_result(expr, question, input_str, history)
+                actual_result, use_sympy_or_llm1, intermediate_process1, code1 = "ERROR: LLM cannot correct the formula", "sympy and llm", "ERROR: LLM cannot correct the formula", "ERROR: LLM cannot correct the formula"
 
             info['leftSideOfEqualSign'].append(intermediate_process1) # 如果不是正确的计算表达式，那么左边和右边的表达式都是空的,这两个位置是记录公式推导过程的
             info['rightSideOfEqualSign'].append("")
@@ -462,6 +462,7 @@ def process_jsonl_file_concurrent(source_path, dest_path):
     with open(dest_path, 'w', encoding='utf-8') as file:
         file.writelines(results)
 
+@time_it
 def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder):
     
     print("第三步判断单步计算是否正确,包括公式的正确性和结果的正确性……")

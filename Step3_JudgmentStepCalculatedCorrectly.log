@@ -14,3 +14,73 @@ SyntaxError: invalid syntax (<string>, line 1)
 SyntaxError: invalid syntax (<string>, line 1)
 2024-04-24 11:32:25,674 - ERROR -  the simplified expression is << (28 * 5) - (40 * 3)) * 52 = (28*5)-(40*3))*52 >> --- Unsimplified << (28*5)-(40*3))*52 >>: Sympify of expression 'could not parse '(28*5)-(40*3))*52'' failed, because of exception being raised:
 TokenError: ('EOF in multi-line statement', (2, 0))
+2024-04-25 18:12:50,195 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:13:06,025 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:13:24,877 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:13:42,052 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:14:05,242 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:14:19,613 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:14:33,959 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:14:45,776 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:14:58,337 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:15:21,101 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:15:36,047 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:16:09,543 - ERROR -  the simplified expression is << = =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:20:41,998 - ERROR -  the simplified expression is << = =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:22:31,679 - ERROR -  the simplified expression is << = =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 18:28:38,385 - ERROR -  the simplified expression is << = =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:25,983 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:26,085 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:26,175 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:26,255 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:27,789 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:29,210 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:30,657 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:32,065 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:34,892 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:37,797 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:40,629 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:43,341 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:47,738 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:52,180 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:50:56,687 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:51:00,754 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:51:06,563 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:51:12,271 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:51:18,545 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)
+2024-04-25 19:51:24,105 - ERROR -  the simplified expression is <<  =  >> --- Unsimplified <<  >>: Sympify of expression 'could not parse ''' failed, because of exception being raised:
+SyntaxError: invalid syntax (<string>, line 0)

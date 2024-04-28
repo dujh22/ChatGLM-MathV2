@@ -1,6 +1,24 @@
+# 如果打开下面一行，命令行会自动输出代码执行的时间
+import time
+# 这个装饰器 time_it 可以被应用到任何你希望测量执行时间的函数上。它通过计算函数开始和结束时的时间来计算执行时间，并将时间转换为小时、分钟和秒的格式。
+def time_it(func):
+    """
+    装饰器，用于测量函数执行时间。
+    """
+    def wrapper(*args, **kwargs):
+        start_time = time.time()  # 获取开始时间
+        result = func(*args, **kwargs)  # 执行函数
+        end_time = time.time()  # 获取结束时间
+        time_taken = end_time - start_time  # 计算耗时
+        hours, rem = divmod(time_taken, 3600)
+        minutes, seconds = divmod(rem, 60)
+        print(f"{func.__name__} executed in: {int(hours):02d}h:{int(minutes):02d}m:{seconds:06.3f}s")
+        return result
+    return wrapper
+
 # 如果打开下面两行，命令行会自动输出代码执行的全部日志
-# import hunter # 用于调试
-# hunter.trace(module=__name__) # 用于调试
+import hunter # 用于调试
+hunter.trace(module=__name__) # 用于调试
 
 import sys
 import os
@@ -246,6 +264,7 @@ def build_training_file(input_file, output_file, worker_func, is_glm=False, num_
                 num_save += 1  # 更新已保存项目数
                 progress_bar.update(1)  # 更新进度条
 
+@time_it
 def standard_prompt_response(  
     x, 
     response_key="response", 
@@ -327,6 +346,7 @@ def standard_prompt_response(
     x[response_key] = result
     return result
     
+@time_it
 def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", response_key="response", reference_key="answer", max_retry=3, PROMPT_TEMPLATE=None):
     '''
         该函数使用指定的模型（主干）评估数学应答。它用问题陈述、正确答案和助手的回答格式化输入，然后查询模型以评估回答的准确性。该函数会多次尝试以获得评级，并将结果添加到输出列表中，其中包括答案、评级和完整的判断结果。这种设置通常用于需要对回答进行自动评分或反馈的教育或测试环境中。
@@ -408,11 +428,15 @@ def main():
         response_key = "response"
         reference_key = "solution"
         # 下面三个参数需要根据mode动态调整
-        # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0.jsonl"
-        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data//test_data0_tgi.jsonl"
+        
+        # 如果是生成模式
         # backbone = "tgi" # generate用tgi，critic用chatglm_platform
-        backbone = "chatglm_platform"
+        # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100.jsonl"
         # mode = "response"
+
+        # 如果是评估模式
+        backbone = "chatglm_platform"
+        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl"
         mode = "critic"
 
     # 创建ArgumentParser对象

@@ -52,9 +52,24 @@ def process_json_line(line):
             label_raw = label_match.group(1).strip()
             label = 0 if label_raw.endswith('-') else 1 if label_raw.endswith('+') else label_raw
 
+            # 识别公式
+            equation = []
+            pattern = r"<<(.+?)=(.+?)>>"
+            matches = re.findall(pattern, content)
+            if len(matches) == 0:
+                pattern = r"([\d\s\/*\-+.%]+)=([\d\s\/*\-+.%]+)"
+                matches = re.findall(pattern, content)
+            for expr, expected_result in matches:
+                expr = expr.lstrip("<")
+                expr = expr.split("=")[0]
+                expected_result = expected_result.rstrip(">")
+                expected_result = expected_result.split("=")[-1]
+                equation.append(f"{expr}={expected_result}")
+
             # 更新solution字典
             new_json["solution"][step_number] = {
                 "content": content,
+                'equation': equation,
                 "label": label
             }
 
@@ -82,8 +97,10 @@ def Step1_SplitByRow_forMathShepherd(source_folder, target_folder):
 
 def main():
     # 源文件夹和目标文件夹的路径
-    source_folder = 'F://code//github//ChatGLM-MathV2//raw_data//peiyi9979_Math_Shepherd'
-    target_folder = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_step1'
+    # source_folder = 'F://code//github//ChatGLM-MathV2//raw_data//peiyi9979_Math_Shepherd'
+    # target_folder = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_step1'
+    source_folder = 'F://code//github//ChatGLM-MathV2//raw_data//peiyi9979_Math_Shepherd_for_codeTest'
+    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_step1'
     # source_folder = input("请输入源文件夹路径: ")
     # target_folder = input("请输入目标文件夹路径: ")
     Step1_SplitByRow_forMathShepherd(source_folder, target_folder)

@@ -1,3 +1,22 @@
+# 如果打开下面一行，命令行会自动输出代码执行的时间
+import time
+# 这个装饰器 time_it 可以被应用到任何你希望测量执行时间的函数上。它通过计算函数开始和结束时的时间来计算执行时间，并将时间转换为小时、分钟和秒的格式。
+def time_it(func):
+    """
+    装饰器，用于测量函数执行时间。
+    """
+    def wrapper(*args, **kwargs):
+        start_time = time.time()  # 获取开始时间
+        result = func(*args, **kwargs)  # 执行函数
+        end_time = time.time()  # 获取结束时间
+        time_taken = end_time - start_time  # 计算耗时
+        hours, rem = divmod(time_taken, 3600)
+        minutes, seconds = divmod(rem, 60)
+        print(f"{func.__name__} executed in: {int(hours):02d}h:{int(minutes):02d}m:{seconds:06.3f}s")
+        return result
+    return wrapper
+
+from tqdm import tqdm
 import json
 import re  # 导入re模块，用于正则表达式操作
 import requests  # 导入requests模块，用于HTTP请求
@@ -11,6 +30,7 @@ TOPP = 0.2  # 设置生成文本时的Top-p参数
 # 设置模板路径
 prompt_template_path = 'F://code//github//ChatGLM-MathV2//shepherd_prm//templates//criticllm_math_template.txt'
 
+@time_it
 def split_response(response): # 使用正则表达式按换行符分割响应文本
     # 首先判断\n\n存在的数量，如果超过超过一个则按照这个划分
     if response.count('\n\n') >= 2:
@@ -29,6 +49,7 @@ def split_response(response): # 使用正则表达式按换行符分割响应文
         steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
         return steps
 
+@time_it
 def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
     '''
         该功能用于与基于聊天的模型平台通信，向其发送当前和历史对话数据，然后接收生成的回复。它可以通过温度和top_p 等参数对生成过程进行详细定制，因此适用于需要根据用户输入和以前的对话上下文动态生成回复的交互式应用。
@@ -79,6 +100,7 @@ def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
 
     return answer  # 返回生成的回答或None
 
+@time_it
 def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_retry=3):
     '''
         该函数根据对话历史和当前提示构建消息流，然后查询指定 URL 上的文本生成模型。它会调整生成参数，如采样、标记限制和温度，并在出现错误时重试请求。这种功能对于将历史对话上下文整合到响应生成中的系统来说非常典型，因此适用于需要保持连贯和上下文适当的交互的聊天应用或对话系统。
@@ -123,6 +145,7 @@ def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_r
 
     return result  # 返回生成的结果或None
 
+@time_it
 def query_gpt4(prompt, history=[], backbone="gpt-3.5-turbo"):
     '''
         该函数与 OpenAI 的 API 集成，可根据一系列对话转折和当前用户提示生成回复。它使用 "用户 "和 "助手 "的角色设置对话历史，然后向指定的 OpenAI 模型发出请求以生成回复。该功能通过温度和 top_p 等参数进行配置，以控制生成回复的随机性和集中可能性。这对聊天机器人或对话式代理特别有用，因为在这些情况下，保持上下文和生成连贯的回复至关重要。
@@ -146,6 +169,7 @@ def query_gpt4(prompt, history=[], backbone="gpt-3.5-turbo"):
                         )
     return chat_completion.choices[0].message.content  # 返回生成的文本内容
 
+@time_it
 def standard_prompt_response(  
     x, 
     response_key="response", 
@@ -202,6 +226,7 @@ def standard_prompt_response(
     x[response_key] = result
     return result
 
+@time_it
 def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", response_key="response", reference_key="answer", max_retry=3, PROMPT_TEMPLATE=None):
     '''
         该函数使用指定的模型（主干）评估数学应答。它用问题陈述、正确答案和助手的回答格式化输入，然后查询模型以评估回答的准确性。该函数会多次尝试以获得评级，并将结果添加到输出列表中，其中包括答案、评级和完整的判断结果。这种设置通常用于需要对回答进行自动评分或反馈的教育或测试环境中。
@@ -261,11 +286,13 @@ def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", res
     return x
 
 # 准备模板函数
+@time_it
 def prepare_template(prompt_filepath): 
     global PROMPT_TEMPLATE  # 声明PROMPT_TEMPLATE为全局变量
     PROMPT_TEMPLATE = open(prompt_filepath, encoding='utf-8').read().strip()
     return PROMPT_TEMPLATE
 
+@time_it
 def query_tgi_completion(prompt):
     '''
         这段 Python 代码会配置并向文本生成 API 发送 POST 请求，其中的特定参数会影响生成文本的风格和多样性。这些配置的温度和 top_p 值各不相同，会影响文本生成的确定性或创造性。随机模块用于在这些配置之间进行选择，从而在生成过程中引入可变性。这种设置尤其适用于需要可控和多样化文本输出的应用，例如自动内容生成或聊天机器人。
@@ -306,6 +333,7 @@ def query_tgi_completion(prompt):
 
     return result  # 返回生成的文本
 
+@time_it
 def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code-v3"):
     '''
         该函数处理包含提示和响应详细信息的给定字典 x，为响应的每个步骤生成扩展路径。它使用辅助函数 query_tgi_completion，尝试生成扩展路径，每一步最多可生成三次，以确保稳健的错误处理和重试机制。这种方法适用于需要根据先前步骤顺序生成内容的场景，例如为机器学习模型或自动应答系统创建训练数据。
@@ -349,6 +377,7 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
     x["generated_paths"] = output  # 将生成的所有扩展路径存储在输入字典x中的"generated_paths"键下
     return x  # 返回更新后的字典x
 
+@time_it
 def evaluate_process(x, prompt_key="prompt", process_response_key="generated_paths", reference_answewr_key="reference", max_retry=3, backbone="chatglm_platform", PROMPT_TEMPLATE=None):
     '''
         该功能通过使用批判函数根据参考答案对每个回复步骤进行评分来评估生成文本路径的质量，通常用于评估数学问题或类似内容，其正确性可以客观判断。它根据分数计算软标签和硬标签，其中软标签是二进制结果（分数高于阈值）的平均值，而硬标签则表示大部分分数是否通过了阈值。这种评估在教育软件、自动辅导系统或其他需要对生成的回复进行反馈的应用中特别有用。
@@ -388,6 +417,7 @@ def evaluate_process(x, prompt_key="prompt", process_response_key="generated_pat
 
     return x  # 返回更新后的字典x
 
+@time_it
 def select_math_data_by_rating(data):
     '''
         该函数处理一组数学问题（或其他类似的评价任务），根据评分选择或过滤这些问题。它支持以文件路径或直接以数据形式输入。该函数根据给定的下限计算每个项目的平均分数和通过率，并用计算出的分数和选择指标更新每个项目。在需要自动评分和反馈以评估和改进学习材料或算法的教育或测试环境中，这一过程尤其有用。
@@ -418,11 +448,13 @@ def select_math_data_by_rating(data):
 
     return x  # 返回处理后的数据列表
 
+@time_it
 def out_to_file(data):
     results = [json.dumps(data, ensure_ascii=False) + '\n']
     with open("output.jsonl", 'w', encoding='utf-8') as file:
         file.writelines(results)
 
+@time_it
 def api_both(question, response = None, answer = None):
     data = data = {"questions": question}
     
@@ -430,6 +462,7 @@ def api_both(question, response = None, answer = None):
     if response:
         data["response"] = response
     else:
+        print("第零步 生成回答……")
         data["response"] = standard_prompt_response(
             data, 
             backbone = "tgi",
@@ -442,6 +475,7 @@ def api_both(question, response = None, answer = None):
         data["answer"] = "no reference answer"
 
     # 后向结果评分反馈
+    print("第一步 后向结果评分反馈……")
     PROMPT_TEMPLATE = prepare_template(prompt_template_path) # 准备提示模板
     data_back = critic_math_problem(
         data, 
@@ -453,6 +487,7 @@ def api_both(question, response = None, answer = None):
     )
 
     # 前向过程路径预测
+    print("第二步 前向过程路径预测……")
     data_path_pred = generate_process(
         data_back,
         prompt_key = "questions",
@@ -460,6 +495,7 @@ def api_both(question, response = None, answer = None):
     )
     
     # 前向过程路径评估
+    print("第三步 前向过程路径评估……")
     data_path_pred_judge = evaluate_process(
         data_path_pred,
         backbone = "chatglm_platform",
@@ -469,6 +505,7 @@ def api_both(question, response = None, answer = None):
         PROMPT_TEMPLATE = PROMPT_TEMPLATE
     )
 
+    print("第四步 选择数学数据……")
     data_path_pred_judge_aggregate = select_math_data_by_rating(
         data_path_pred_judge
     )
@@ -478,15 +515,17 @@ def api_both(question, response = None, answer = None):
     
     return data_path_pred_judge_aggregate
 
+@time_it
 def main():
     question = "Janet pays $40/hour for 3 hours per week of clarinet lessons and $28/hour for 5 hours a week of piano lessons. How much more does she spend on piano lessons than clarinet lessons in a year?"
     result = api_both(question)
     result = json.dumps(result, indent=4, ensure_ascii=False)
     print(result)
 
+@time_it
 def main2():
     with open("F://code//github//ChatGLM-MathV2//data//test_data//test_data1.jsonl", 'r', encoding='utf-8') as file, open("F://code//github//ChatGLM-MathV2//data//test_data//test_data1_result.jsonl", 'w', encoding='utf-8') as out_file:    
-        for line in file:
+        for line in tqdm(file, desc="Processing"):
             data = json.loads(line)
             question = data["question"]
             result = api_both(question)
