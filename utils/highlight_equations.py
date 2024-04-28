@@ -120,9 +120,6 @@ def highlight_equations(text):
     # 找到所有的等式
     part2 = parts.copy()
 
-    print("raw_part2", part2)
-    print()
-
     part3 = []
     equations = []
     # 首先去除所有数字后面存在的字母串
@@ -160,12 +157,6 @@ def highlight_equations(text):
             equation = "".join(part3[start_pos:end_pos + 1])
 
             equations.append(equation)
-    print("part2: ",part2)
-    print()
-    print("part3: ",part3)
-    print()
-    print("equations: ",equations)
-    print()
 
     # equation_id = 0
     
@@ -189,7 +180,7 @@ def highlight_equations(text):
         else:
             result.append(i) 
 
-    return "".join(result), "".join(result).replace('>> ', '>>')
+    return "".join(result)# , "".join(result).replace('>> ', '>>')
 
 
 if __name__ == '__main__':

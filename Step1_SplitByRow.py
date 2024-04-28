@@ -31,7 +31,7 @@ def process_json_line(line):
     new_json = {
         "questions": data["questions"],
         "solution": {},
-        "dataset": data["dataset"],
+        "dataset": data.get("dataset", "test"),
     }
 
     # 方案拆分
@@ -95,13 +95,15 @@ def create_jsonl_file(source_folder, data={}):
                 json.dump(data, file, ensure_ascii=False)
                 file.write('\n')  # 换行，以便每个 JSON 对象占据一行
             
-def Step1_SplitByRow(source_folder, target_folder, data):
+def Step1_SplitByRow(source_folder, target_folder, data = {}):
     create_jsonl_file(source_folder, data)
     process_files(source_folder, target_folder)
 
 def main():
-    source_folder = 'F://code//github//ChatGLM-MathV2//raw_data//pipeline_test'
-    target_folder = 'F://code//github//ChatGLM-MathV2//data//pipeline_test_step1'
+    # source_folder = 'F://code//github//ChatGLM-MathV2//raw_data//pipeline_test'
+    # target_folder = 'F://code//github//ChatGLM-MathV2//data//pipeline_test_step1'
+    source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front'
+    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step1'
     Step1_SplitByRow(source_folder, target_folder)
 
 if __name__ == '__main__':

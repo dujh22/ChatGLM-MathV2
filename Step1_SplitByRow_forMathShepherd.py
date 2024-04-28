@@ -100,7 +100,7 @@ def main():
     # source_folder = 'F://code//github//ChatGLM-MathV2//raw_data//peiyi9979_Math_Shepherd'
     # target_folder = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_step1'
     source_folder = 'F://code//github//ChatGLM-MathV2//raw_data//peiyi9979_Math_Shepherd_for_codeTest'
-    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_step1'
+    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//answer'
     # source_folder = input("请输入源文件夹路径: ")
     # target_folder = input("请输入目标文件夹路径: ")
     Step1_SplitByRow_forMathShepherd(source_folder, target_folder)

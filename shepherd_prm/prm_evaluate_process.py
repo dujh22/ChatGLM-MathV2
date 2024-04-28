@@ -272,14 +272,14 @@ def main():
         # 下面三个参数需要根据mode动态调整
 
         # 如果是生成模式
-        backbone = "tgi" # generate用tgi，critic用chatglm_platform
-        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic.jsonl"
-        mode = "generation"
+        # backbone = "tgi" # generate用tgi，critic用chatglm_platform
+        # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic.jsonl"
+        # mode = "generation"
 
         # 如果是评估模式
-        # backbone = "chatglm_platform"
-        # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path.jsonl"
-        # mode = "critic"
+        backbone = "chatglm_platform"
+        input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path.jsonl"
+        mode = "critic"
 
 
     # 创建命令行解析器

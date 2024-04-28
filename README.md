@@ -22,7 +22,7 @@
 
 ## 2. 使用说明
 
-### 2.1 最简单的使用方式：调用api
+### 2.1 最简单的使用方式：调用api串行执行
 
 不需要考虑其他事情，只需要简单地运行：
 
@@ -216,11 +216,11 @@ def pipeline_file():
     is_test = True # 小样本开关：如果为True，则只处理少量数据，如果为False，则处理全量数据
 ```
 
-## 2.4 并发执行文件批处理
+### 2.4 并发执行文件批处理
 
 如果是针对多条数据，建议采用批处理方式，本项目对批处理进行了有效支持，具体运行过程如下：
 
-### 2.4.1 后向生成结果
+#### 2.4.1 后向生成结果
 
 > shepherd_prm/query_api.py
 
@@ -242,7 +242,7 @@ cd ./shepherd_prm
 python query_api.py
 ```
 
-### 2.4.2 后向结果评分反馈
+#### 2.4.2 后向结果评分反馈
 
 > shepherd_prm/query_api.py
 
@@ -263,7 +263,7 @@ mode = "critic"
 python query_api.py
 ```
 
-### 2.4.3 前向过程路径预测
+#### 2.4.3 前向过程路径预测
 
 > shepherd_prm/prm_evaluate_process.py
 
@@ -284,7 +284,7 @@ mode = "generation"
 python prm_evaluate_process.py
 ```
 
-### 2.4.4 前向过程路径评估与评估结果汇总
+#### 2.4.4 前向过程路径评估与评估结果汇总
 
 > shepherd_prm/api_front_time.py
 
@@ -307,6 +307,100 @@ python prm_evaluate_process.py
 
 最终2.4.1-2.4.4的运行结果在 F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2.jsonl
 
+#### 2.4.5 前向自动标注
+
+##### 2.4.5.1 基本数据集获取
+
+> utils\turn_response_and_solution.py
+
+首先修改相关参数，在main函数中
+
+```python
+input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
+output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_for_pro.jsonl'
+```
+
+然后运行
+
+```shell
+cd ./utils
+python turn_response_and_solution.py
+```
+
+##### 2.4.5.2 数据分步（公式高亮有bug）
+
+> Step1_SplitByRow.py
+
+首先修改相关参数，在main函数中
+
+```python
+source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front'
+target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step1'
+```
+
+然后运行
+
+```shell
+cd ..
+python Step1_SplitByRow.py
+```
+
+##### 2.4.5.3 步骤类型判断(未执行)
+> utils\turn_response_and_solution.py
+
+首先修改相关参数，在main函数中
+
+```python
+input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
+output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_for_pro.jsonl'
+```
+
+然后运行
+
+```shell
+cd ./utils
+python turn_response_and_solution.py
+```
+
+
+##### 2.4.5.4 计算步细标注
+> utils\turn_response_and_solution.py
+
+首先修改相关参数，在main函数中
+
+```python
+input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
+output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_for_pro.jsonl'
+```
+
+然后运行
+
+```shell
+cd ./utils
+python turn_response_and_solution.py
+```
+
+
+##### 2.4.5.5 推理步细标注
+
+> utils\turn_response_and_solution.py
+
+首先修改相关参数，在main函数中
+
+```python
+input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
+output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_for_pro.jsonl'
+```
+
+然后运行
+
+```shell
+cd ./utils
+python turn_response_and_solution.py
+```
+
+
+
 
 
 ## 3. 辅助函数说明
@@ -317,12 +411,13 @@ python prm_evaluate_process.py
 
 该文件夹内是一些工具性质的脚本：
 
-1. get_data_for_codeTest.py用户从大数据中获得小批量数据
-1. make_test_data.py用于从math_shepherd数据集转化获得原始测试数据集
-1. path_conversion.py用于路径转换
-1. pipelineForDataAnnotation.py 用于针对中文数据集进行response分步和步规约（如果超过10步规约回10步内）
+1. get_data_for_codeTest.py：用户从大数据中获得小批量数据
+1. make_test_data.py：用于从math_shepherd数据集转化获得原始测试数据集
+1. path_conversion.py：用于路径转换
+1. pipelineForDataAnnotation.py：用于针对中文数据集进行response分步和步规约（如果超过10步规约回10步内）
 1. judge_data_duplicates_and_languageStats.py：处理文件夹中的所有jsonl文件，查重并分析语言
 1. math_chatglm_raw_data_standard.py：math_chatglm_raw_data数据集标准化
+1. run_python_func.py：用于自动化执行python脚本
 
 ### 3.2 llm
 

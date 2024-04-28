@@ -27,7 +27,7 @@ import sys
 sys.path.append('F://code//github//ChatGLM-MathV2//shepherd_prm')
 from shepherd_prm.query_api import standard_prompt_response, critic_math_problem, prepare_template, build_training_file
 from shepherd_prm.prm_evaluate_process import generate_process, evaluate_process, select_math_data_by_rating, select_math_data_by_rating2
-from get_data_for_codeTest import get_data_for_codeTest
+from utils.get_data_for_codeTest import get_data_for_codeTest
 from Step1_SplitByRow import Step1_SplitByRow
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning

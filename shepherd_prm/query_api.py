@@ -17,8 +17,8 @@ def time_it(func):
     return wrapper
 
 # 如果打开下面两行，命令行会自动输出代码执行的全部日志
-import hunter # 用于调试
-hunter.trace(module=__name__) # 用于调试
+# import hunter # 用于调试
+# hunter.trace(module=__name__) # 用于调试
 
 import sys
 import os
