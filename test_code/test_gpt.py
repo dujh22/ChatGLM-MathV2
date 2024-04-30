@@ -1,7 +1,7 @@
 # 适用版本 openai <= 0.28.1
 
 import openai
-import config
+import llm.config as config
 
 openai.api_key = config.GPT_API_KEY
 openai.api_base = config.GPT_BASE_URL

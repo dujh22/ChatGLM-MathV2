@@ -22,7 +22,7 @@ import re  # 导入re模块，用于正则表达式操作
 import requests  # 导入requests模块，用于HTTP请求
 import random  # 导入random模块，用于生成随机数
 import openai  # 导入openai模块，用于调用OpenAI的API
-from config import CRITIC_URL, TGI_URL
+from llm.config import CRITIC_URL, TGI_URL
 
 TEMPERATURE = 0.9  # 设置生成文本时的温度参数
 TOPP = 0.2  # 设置生成文本时的Top-p参数

@@ -8,7 +8,7 @@ import hunter # 用于调试
 hunter.trace(module=__name__) # 用于调试
 
 # 该部分用于设置调用的LLM相关信息
-import config
+import llm.config as config
 import openai
 # 设定API密钥和基本URL
 openai.api_key = config.GPT_API_KEY

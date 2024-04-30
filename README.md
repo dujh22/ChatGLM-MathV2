@@ -307,6 +307,23 @@ python prm_evaluate_process.py
 
 最终2.4.1-2.4.4的运行结果在 F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2.jsonl
 
+针对2.4.1-2.4.4的评估Acc,需要在上面的指令完成后，手动运行如下指令：
+
+```shell
+python Check3_CalculatePathPredictAccuracy.py
+```
+
+同样注意首先修改一下相关参数：在main函数中
+
+```python
+file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2.jsonl'
+output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2_statistics.csv'
+```
+
+还需注意的是，如果2.4.4输出文件中，不包括可以对比的答案信息，需要执行如下脚本将答案信息插入其中再计算Acc，否则Acc默认全部与label=1进行比较。
+
+
+
 #### 2.4.5 前向自动标注
 
 ##### 2.4.5.1 基本数据集获取
@@ -327,7 +344,7 @@ cd ./utils
 python turn_response_and_solution.py
 ```
 
-##### 2.4.5.2 数据分步（公式高亮有bug）
+##### 2.4.5.2 数据分步
 
 > Step1_SplitByRow.py
 
@@ -345,63 +362,65 @@ cd ..
 python Step1_SplitByRow.py
 ```
 
-##### 2.4.5.3 步骤类型判断(未执行)
-> utils\turn_response_and_solution.py
+##### 2.4.5.3 步骤类型判断
+> Step2_IsCalculationOrReasoning.py
 
 首先修改相关参数，在main函数中
 
 ```python
-input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
-output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_for_pro.jsonl'
+source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step1'
+target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step2'
 ```
 
 然后运行
 
 ```shell
-cd ./utils
-python turn_response_and_solution.py
+python Step2_IsCalculationOrReasoning.py
 ```
 
 
 ##### 2.4.5.4 计算步细标注
-> utils\turn_response_and_solution.py
+> Step3_JudgmentStepCalculatedCorrectly.py
 
 首先修改相关参数，在main函数中
 
 ```python
-input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
-output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_for_pro.jsonl'
+source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step2'
+target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step3'    
 ```
 
 然后运行
 
 ```shell
-cd ./utils
-python turn_response_and_solution.py
+python Step3_JudgmentStepCalculatedCorrectly.py
 ```
 
+如果过程中出现错误，可以反复运行上述指令。代码的鲁棒性保证会从断电数据出发继续进行执行。
+
+该脚本会自动调用Check1_JsonVisualization.py，最终会在输出目录下除输出结果jsonl文件的同时输出一个对应的分步scv文件用于可视化debug。
 
 ##### 2.4.5.5 推理步细标注
 
-> utils\turn_response_and_solution.py
+> Step4_JudgmentStepReasoningCorrectly.py
 
 首先修改相关参数，在main函数中
 
 ```python
-input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
-output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_for_pro.jsonl'
+source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step3'
+target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step4'
 ```
 
 然后运行
 
 ```shell
-cd ./utils
-python turn_response_and_solution.py
+python Step4_JudgmentStepReasoningCorrectly.py
 ```
 
+如果过程中出现错误，可以反复运行上述指令。代码的鲁棒性保证会从断电数据出发继续进行执行。
 
+该脚本会自动调用Check1_JsonVisualization.py，最终会在输出目录下除输出结果jsonl文件的同时输出一个对应的分步scv文件用于可视化debug。
 
-
+该脚本会自动调用Check2_CalculateAccuracy.py，最终会在_Check2Step4结尾的输出目录下输出进一步包含评估的结果jsonl文件，同时输出csv文件记录的详细Acc。
 
 ## 3. 辅助函数说明
 

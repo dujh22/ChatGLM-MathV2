@@ -10,14 +10,14 @@ import openai  # 导入openai模块，用于调用OpenAI的API
 import sympy as sp
 import subprocess
 
-from config import CRITIC_URL, TGI_URL
+from llm.config import CRITIC_URL, TGI_URL
 
 TEMPERATURE = 0.9  # 设置生成文本时的温度参数
 TOPP = 0.2  # 设置生成文本时的Top-p参数
 
 
 # 该部分用于设置调用的LLM相关信息
-import config
+import llm.config as config
 # 设定API密钥和基本URL
 openai.api_key = config.GPT_API_KEY
 openai.api_base = config.GPT_BASE_URL

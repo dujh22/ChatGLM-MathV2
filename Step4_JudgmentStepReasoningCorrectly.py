@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import concurrent.futures
 from tqdm import tqdm
 
-from get_data_for_codeTest import get_data_for_codeTest
+from utils.get_data_for_codeTest import get_data_for_codeTest
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
 from Step3_JudgmentStepCalculatedCorrectly import Step3_JudgmentStepCalculatedCorrectly, llm_response
@@ -40,17 +40,22 @@ def check_reasoning(per_step, content, question, history):
     for i in range(10):
         # response = gpt_generate(prompt)
         response = llm_response(prompt)  # 调用生成方法
-        # 获取response的第一句话或者如果没有符号就是完整的response
-        response_first_sentence = response.split(".")[0]
-        # 提取 response 的前三个字符，并将它们转换成小写来进行判断。
-        if response_first_sentence[:3].lower() == "yes" or "yes" in response_first_sentence.lower():  
-            return 1, response
+        if type(response) == str and len(response) > 0:
+            # 获取response的第一句话或者如果没有符号就是完整的response
+            response_first_sentence = response.split(".")[0]
+            # 提取 response 的前三个字符，并将它们转换成小写来进行判断。
+            if response_first_sentence[:3].lower() == "yes" or "yes" in response_first_sentence.lower():  
+                return 1, response
+            else:
+                # 尝试修正表达式
+                match = re.search(r'<<(.+?)>>', response)
+                if match:
+                    return 0, match.group(1)
+                else:
+                    continue
         else:
-            # 尝试修正表达式
-            match = re.search(r'<<(.+?)>>', response)
-            if match:
-                return 0, match.group(1)
-    return 0, "Error: LLM cannot generate correct reasoning."
+            continue
+    return 0, ""
 
 # 串行处理
 def process_jsonl_file(source_path, dest_path):
@@ -165,6 +170,44 @@ def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, star
             # 计算acc
             Check2_CalculateAccuracy(save_file_name)
 
+def process_jsonl_file_concurrent2(source_path, dest_path):
+    processed_questions = set()
+    
+    # 读取已处理的问题
+    if os.path.exists(dest_path):
+        with open(dest_path, 'r', encoding='utf-8') as file:
+            for line in file:
+                try:
+                    data = json.loads(line)
+                    processed_questions.add(data['questions'])
+                except json.JSONDecodeError:
+                    continue
+
+    # 读取源文件并过滤已处理的行
+    lines_to_process = []
+    with open(source_path, 'r', encoding='utf-8') as file:
+        for line in file:
+            try:
+                data = json.loads(line)
+                if data['questions'] not in processed_questions:
+                    lines_to_process.append(line)
+            except json.JSONDecodeError:
+                continue
+    
+    # 使用 ThreadPoolExecutor 来并发处理每一行
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(process_line, line): line for line in lines_to_process}
+        
+        with tqdm(total=len(futures), desc='Processing lines') as progress:
+            with open(dest_path, 'a', encoding='utf-8') as output_file:
+                for future in as_completed(futures):
+                    result = future.result()
+                    output_file.write(result)
+                    output_file.flush()  # 确保每次写入后立即保存
+                    progress.update(1)  # 更新进度条
+
+
+
 @time_it
 def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
     
@@ -182,8 +225,14 @@ def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
             # process_jsonl_file_concurrent(source_path, dest_path)
             process_jsonl_file_concurrent2(source_path, dest_path)
 
+            # 可视化结果输出，用于debug
+            Check1_JsonlVisualization(dest_path)
+
+            # 计算acc
+            Check2_CalculateAccuracy(dest_path)
+
 # 使用方法：
-def main():
+def main2():
     code_test_state = True
     base_folder = "F://code//github//ChatGLM-MathV2"
     # base_folder = "/workspace/dujh22/ChatGLM-MathV2"
@@ -211,7 +260,10 @@ def main():
     #Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
     Step4_JudgmentStepReasoningCorrectly(target_folder3, target_folder4)
 
-   
+def main():
+    source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step3'
+    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step4' 
+    Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder)
 
 if __name__ == '__main__':
     main()

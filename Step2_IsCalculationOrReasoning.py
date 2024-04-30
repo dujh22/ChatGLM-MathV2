@@ -8,7 +8,7 @@ import os
 import json
 import re
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
-from get_data_for_codeTest import get_data_for_codeTest
+from utils.get_data_for_codeTest import get_data_for_codeTest
 from tqdm import tqdm
 
 def is_calculation(content):
@@ -49,7 +49,7 @@ def Step2_IsCalculationOrReasoning(source_folder, target_folder):
             process_jsonl_file(source_path, dest_path)
 
 # 使用方法：
-def main():
+def main2():
     code_test_state = True
     base_folder = "F://code//github//ChatGLM-MathV2"
     dataset_name = "peiyi9979_Math_Shepherd"
@@ -67,6 +67,12 @@ def main():
 
     Step1_SplitByRow_forMathShepherd(source_folder, target_folder1)
     Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
+
+def main():
+    source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step1'
+    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step2'
+    Step2_IsCalculationOrReasoning(source_folder, target_folder)
+
 
 if __name__ == '__main__':
     main()

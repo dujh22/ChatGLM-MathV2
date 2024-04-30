@@ -19,7 +19,7 @@ def time_it(func):
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import TGI_URL # Import TGI_URL from config.py
+from llm.config import TGI_URL # Import TGI_URL from config.py
 
 import json  # 导入json模块，用于处理JSON数据
 import argparse  # 导入argparse模块，用于处理命令行参数

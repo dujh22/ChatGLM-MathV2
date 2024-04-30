@@ -1,5 +1,6 @@
 import json
 import os
+import csv
 from tqdm import tqdm
 from Step3_JudgmentStepCalculatedCorrectly import replace_calculated_result, llm_response
 
@@ -76,10 +77,10 @@ def llm_judge_response(question, step, info, type):
 
     for i in range(10):
         try:
-            response = llm_response(prompt, use_glm_or_gpt='gpt')
+            response = llm_response(prompt, use_glm_or_gpt='glm')
             return response
         except:
-            response = "no llm judge"
+            response = ""
             
     return response
 
@@ -205,23 +206,25 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                 # 检测LLM针对计算步骤的判断是否正确
                 response1 = step_info['LLMJudgmentStepCalculatedCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
-                response1_first_sentence = response1.split(".")[0]
-                if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
-                    correct_judgments_by_step['LLMJudgmentStepCalculatedCorrectly'] += 1
-                else:
-                    llm_total_calculate_correct = False
-                    explain_correct = False
+                if type(response1) == str and len(response1) > 0:
+                    response1_first_sentence = response1.split(".")[0]
+                    if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
+                        correct_judgments_by_step['LLMJudgmentStepCalculatedCorrectly'] += 1
+                    else:
+                        llm_total_calculate_correct = False
+                        explain_correct = False
 
 
                 # 检测LLM针对计算公式的判断是否正确
                 response1 = step_info['LLMJudgmentStepEquationCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
-                response1_first_sentence = response1.split(".")[0]
-                if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
-                    correct_judgments_by_step['LLMJudgmentStepEquationCorrectly'] += 1
-                else:
-                    llm_total_equation_correct = False
-                    explain_correct = False
+                if type(response1) == str and len(response1) > 0:
+                    response1_first_sentence = response1.split(".")[0]
+                    if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
+                        correct_judgments_by_step['LLMJudgmentStepEquationCorrectly'] += 1
+                    else:
+                        llm_total_equation_correct = False
+                        explain_correct = False
 
             else:
 
@@ -245,12 +248,13 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                 # 检测针对推理步骤的判断是否正确
                 response2 = step_info['LLMJudgmentStepReasoningCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
-                response2_first_sentence = response2.split(".")[0]
-                if response2_first_sentence[:3].lower() == "yes" or "yes" in response2_first_sentence.lower():  # 如果推理正确
-                    correct_judgments_by_step['LLMJudgmentStepReasoningCorrectly'] += 1
-                else:
-                    llm_total_reasoning_correct = False
-                    explain_correct = False
+                if type(response2) == str and len(response2) > 0:
+                    response2_first_sentence = response2.split(".")[0]
+                    if response2_first_sentence[:3].lower() == "yes" or "yes" in response2_first_sentence.lower():  # 如果推理正确
+                        correct_judgments_by_step['LLMJudgmentStepReasoningCorrectly'] += 1
+                    else:
+                        llm_total_reasoning_correct = False
+                        explain_correct = False
             
             if explain_correct == True:
                 correct_judgments_by_step['correct_explain_steps'] += 1
@@ -391,24 +395,26 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                 step_info['LLMJudgmentStepCalculatedCorrectly'] = llm_judge_response(question, step_key, step_info, 0)  # 调用生成方法
                 response1 = step_info['LLMJudgmentStepCalculatedCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
-                response1_first_sentence = response1.split(".")[0]
-                if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
-                    correct_judgments_by_step['LLMJudgmentStepCalculatedCorrectly'] += 1
-                else:
-                    llm_total_calculate_correct = False
-                    explain_correct = False
+                if type(response1) == str and len(response1) > 0:
+                    response1_first_sentence = response1.split(".")[0]
+                    if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
+                        correct_judgments_by_step['LLMJudgmentStepCalculatedCorrectly'] += 1
+                    else:
+                        llm_total_calculate_correct = False
+                        explain_correct = False
 
 
                 # 检测LLM针对计算公式的判断是否正确
                 step_info['LLMJudgmentStepEquationCorrectly'] = llm_judge_response(question, step_key, step_info, 1)  # 调用生成方法  
                 response1 = step_info['LLMJudgmentStepEquationCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
-                response1_first_sentence = response1.split(".")[0]
-                if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
-                    correct_judgments_by_step['LLMJudgmentStepEquationCorrectly'] += 1
-                else:
-                    llm_total_equation_correct = False
-                    explain_correct = False
+                if type(response1) == str and len(response1) > 0:
+                    response1_first_sentence = response1.split(".")[0]
+                    if response1_first_sentence[:3].lower() == "yes" or "yes" in response1_first_sentence.lower():  # 如果计算正确
+                        correct_judgments_by_step['LLMJudgmentStepEquationCorrectly'] += 1
+                    else:
+                        llm_total_equation_correct = False
+                        explain_correct = False
 
             else:
 
@@ -433,12 +439,13 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                 step_info['LLMJudgmentStepReasoningCorrectly'] = llm_judge_response(question, step_key, step_info, 2)  # 调用
                 response2 = step_info['LLMJudgmentStepReasoningCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
-                response2_first_sentence = response2.split(".")[0]
-                if response2_first_sentence[:3].lower() == "yes" or "yes" in response2_first_sentence.lower():  # 如果推理正确
-                    correct_judgments_by_step['LLMJudgmentStepReasoningCorrectly'] += 1
-                else:
-                    llm_total_reasoning_correct = False
-                    explain_correct = False
+                if type(response2) == str and len(response2) > 0:   
+                    response2_first_sentence = response2.split(".")[0]
+                    if response2_first_sentence[:3].lower() == "yes" or "yes" in response2_first_sentence.lower():  # 如果推理正确
+                        correct_judgments_by_step['LLMJudgmentStepReasoningCorrectly'] += 1
+                    else:
+                        llm_total_reasoning_correct = False
+                        explain_correct = False
             
             if explain_correct == True:
                 correct_judgments_by_step['correct_explain_steps'] += 1
@@ -505,112 +512,173 @@ def print_padded_line(key, value, explanation, width=60):
     line = f"{key}: {value}"
     print(line + ' ' * (width - len(line)) + explanation)
 
-def print_statistics(stats_by_step, stats_by_case):
+def print_statistics(stats_by_step, stats_by_case, output_file_path):
     """打印统计信息为表格形式，并格式化为固定宽度的列，使用print函数，并考虑字符宽度，同时附带每项数据的解释。"""
-    print("步骤统计数据:")
-    for key, value in stats_by_step.items():
-        print_padded_line(key, value, "")
-    print('-' * 60)  # 根据总宽度调整分隔线长度
 
-    print("案例统计数据:")
-    for key, value in stats_by_case.items():
-        print_padded_line(key, value, "")
-    print('-' * 60)  # 根据总宽度调整分隔线长度
+    with open(output_file_path, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(['键', '值', '说明'])
 
-    # 用于存储正确判断的步骤数
-    total_steps = stats_by_step['total_steps']
-    if total_steps > 0:
-        print("步骤统计比率及其解释:")
-        for key, value in stats_by_step.items():
-            if key != 'total_steps':  # 避免除以自己
-                explanation = {
-                    'calculation_steps': "完成的计算步骤总数占比",
-                    'reasoning_steps': "完成的推理步骤总数占比",
-                    'LabelJudgmentStepCalculatedCorrectly': "根据人工标签正确计算的步骤占比",
-                    'LabelJudgmentStepEquationCorrectly': "根据人工标签正确的计算公式步骤占比",
-                    'LabelJudgmentStepReasoningCorrectly': "根据人工标签正确的推理步骤占比",
-                    'LLMJudgmentStepCalculatedCorrectly': "LLM判断计算步骤正确的占比",
-                    'LLMJudgmentStepEquationCorrectly': "LLM判断计算公式正确的步骤占比",
-                    'LLMJudgmentStepReasoningCorrectly': "LLM判断推理步骤正确的占比",
-                    'correct_label_steps': "标签正确的总步骤占比",
-                    'correct_explain_steps': "解释正确的总步骤占比",
-                    'sympy_count': "使用SymPy的步骤占比",
-                    'python_code_count': "使用Python编程的步骤占比",
-                }.get(key, "未知统计指标")
-                print_padded_line(f"{key} 步骤占比", f"{value / total_steps * 100:.2f}%", explanation)
-        print("细分步骤统计比率及其解释:")
-        # 处理分母可能为0的情况
-        if stats_by_step["calculation_steps"] > 0:
-            temp = min(stats_by_step["LabelJudgmentStepCalculatedCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
-            print_padded_line(f"LabelJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确计算的计算步骤占比")
-        if stats_by_step["calculation_steps"] > 0:
-            temp = min(stats_by_step["LabelJudgmentStepEquationCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
-            print_padded_line(f"LabelJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式占比")
-        if stats_by_step["reasoning_steps"] > 0:
-            temp = min(stats_by_step["LabelJudgmentStepReasoningCorrectly"] / stats_by_step["reasoning_steps"] * 100, 100)
-            print_padded_line(f"LabelJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的推理步骤占比")
-        if stats_by_step["calculation_steps"] > 0:
-            temp = min(stats_by_step["LLMJudgmentStepCalculatedCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
-            print_padded_line(f"LLMJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的计算步骤占比")
-        if stats_by_step["calculation_steps"] > 0:
-            temp = min(stats_by_step["LLMJudgmentStepEquationCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
-            print_padded_line(f"LLMJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式占比")
-        if stats_by_step["reasoning_steps"] > 0:
-            temp = min(stats_by_step["LLMJudgmentStepReasoningCorrectly"] / stats_by_step["reasoning_steps"] * 100, 100)
-            print_padded_line(f"LLMJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理步骤占比")
+        print("步骤统计数据:")
+        writer.writerow(["步骤统计数据"])
+        explanation = [
+            "总计算步数",
+            "总推理步数",
+            "规则判断计算正确的步数",
+            "规则判断公式正确的步数",
+            "规则判断推理正确的步数",
+            "LLM判断计算正确的步数",
+            "LLM判断公式正确的步数",
+            "LLM判断推理正确的步数",
+            "正确标识计算标签的步数",
+            "正确表示推理标签的步数",
+            "总步数",
+            "使用SymPy的步数",
+            "使用Python编程的步数",
+        ]
+        for i, (key, value) in enumerate(stats_by_step.items()):
+            print_padded_line(key, value, explanation[i])
+            writer.writerow([key, value, explanation[i]])
+        print('-' * 60)  # 根据总宽度调整分隔线长度
 
-    # 用于存储正确判断的样例数
-    total_cases = stats_by_case['total_cases']
-    if total_cases > 0:
-        print("案例统计比率及其解释:")
-        for key, value in stats_by_case.items():
-            if key != 'total_cases':  # 避免除以自己
-                explanation = {
-                    'only_calculation_cases': "仅包含计算步骤的样例占比",
-                    'calculation_and_reasoning_cases': "包含计算和推理步骤的样例占比",
-                    'only_reasoning_cases': "仅包含推理步骤的样例占比",
-                    'LabelJudgmentCaseCalculatedCorrectly': "人工标签判断计算正确的样例占比",
-                    'LabelJudgmentCaseEquationCorrectly': "人工标签判断计算公式正确的样例占比",
-                    'LabelJudgmentCaseReasoningCorrectly': "人工标签判断推理正确的样例占比",
-                    'LLMJudgmentCaseCalculatedCorrectly': "LLM判断计算步骤正确的样例占比",
-                    'LLMJudgmentCaseEquationCorrectly': "LLM判断计算公式正确的样例占比",
-                    'LLMJudgmentCaseReasoningCorrectly': "LLM判断推理步骤正确的样例占比",
-                    'correct_label_cases': "标签判断整体正确的样例占比",
-                    'correct_explain_cases': "解释整体正确的样例占比",
-                    'sympy_count': "使用SymPy的样例占比",
-                    'python_code_count': "使用Python编程的样例占比",
-                }.get(key, "未知统计指标")
-                print_padded_line(f"{key} 样例占比", f"{value / total_cases * 100:.2f}%", explanation)
-        print("细分样例统计比率及其解释:")
-        if (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) > 0:
-            temp = min(stats_by_case["LabelJudgmentCaseCalculatedCorrectly"] / (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"])  * 100, 100)
-            print_padded_line(f"LabelJudgmentCaseCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确计算的计算样例占比")
-            temp = min(stats_by_case["LabelJudgmentCaseEquationCorrectly"] / (stats_by_case ["only_calculation_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
-            print_padded_line(f"LabelJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式样例占比")
-        if (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) > 0:
-            temp = min(stats_by_case["LabelJudgmentCaseReasoningCorrectly"] / (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
-            print_padded_line(f"LabelJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的样例占比")
-        if (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) > 0:
-            temp = min(stats_by_case["LLMJudgmentCaseCalculatedCorrectly"] / (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
-            print_padded_line(f"LLMJudgmentCaseCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的样例步骤占比")
-            temp = min(stats_by_case["LLMJudgmentCaseEquationCorrectly"] / (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
-            print_padded_line(f"LLMJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式的样例占比")
-        if (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) > 0:
-            temp = min(stats_by_case["LLMJudgmentCaseReasoningCorrectly"] / (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
-            print_padded_line(f"LLMJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理的样例占比")
+        print("案例统计数据:")
+        writer.writerow(["案例统计数据"])
+        explanation = [
+            "只有计算步骤的案例数",
+            "既有计算步骤又有推理步骤的案例数",
+            "只有推理步骤的案例数",
+            "规则判断计算正确的案例数",
+            "规则判断公式正确的案例数",
+            "规则判断推理正确的案例数",
+            "LLM判断计算正确的案例数",
+            "LLM判断公式正确的案例数",
+            "LLM判断推理正确的案例数",
+            "正确标识计算标签的案例数",
+            "正确表示推理标签的案例数",
+            "总案例数",
+            "使用SymPy的案例数",
+            "使用Python编程的案例数",
+        ]
+        for i, (key, value) in enumerate(stats_by_case.items()):
+            print_padded_line(key, value, explanation[i])
+            writer.writerow([key, value, explanation[i]])
+        print('-' * 60)  # 根据总宽度调整分隔线长度
+
+        # 用于存储正确判断的步骤数
+        total_steps = stats_by_step.get('total_steps', 0)
+        if total_steps > 0:
+            print("步骤统计比率及其解释:")
+            writer.writerow(["步骤统计比率及其解释"])
+            for key, value in stats_by_step.items():
+                if key != 'total_steps':  # 避免除以自己
+                    explanation = {
+                        'calculation_steps': "完成的计算步骤总数占比",
+                        'reasoning_steps': "完成的推理步骤总数占比",
+                        'LabelJudgmentStepCalculatedCorrectly': "根据人工标签正确计算的步骤占比",
+                        'LabelJudgmentStepEquationCorrectly': "根据人工标签正确的计算公式步骤占比",
+                        'LabelJudgmentStepReasoningCorrectly': "根据人工标签正确的推理步骤占比",
+                        'LLMJudgmentStepCalculatedCorrectly': "LLM判断计算步骤正确的占比",
+                        'LLMJudgmentStepEquationCorrectly': "LLM判断计算公式正确的步骤占比",
+                        'LLMJudgmentStepReasoningCorrectly': "LLM判断推理步骤正确的占比",
+                        'correct_label_steps': "标签正确的总步骤占比",
+                        'correct_explain_steps': "解释正确的总步骤占比",
+                        'sympy_count': "使用SymPy的步骤占比",
+                        'python_code_count': "使用Python编程的步骤占比",
+                    }.get(key, "未知统计指标")
+                    percent_value = value / total_steps * 100
+                    print_padded_line(f"{key} 步骤占比", f"{percent_value:.2f}%", explanation)
+                    writer.writerow([f"{key} 步骤占比", f"{percent_value:.2f}%", explanation])
+            print("细分步骤统计比率及其解释:")
+            writer.writerow(["细分步骤统计比率及其解释"])
+            # 处理分母可能为0的情况
+            if stats_by_step["calculation_steps"] > 0:
+                temp = min(stats_by_step["LabelJudgmentStepCalculatedCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
+                print_padded_line(f"LabelJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确计算的计算步骤占比")
+                writer.writerow([f"LabelJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确计算的计算步骤占比"])
+            if stats_by_step["calculation_steps"] > 0:
+                temp = min(stats_by_step["LabelJudgmentStepEquationCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
+                print_padded_line(f"LabelJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式占比")
+                writer.writerow([f"LabelJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式占比"])
+            if stats_by_step["reasoning_steps"] > 0:
+                temp = min(stats_by_step["LabelJudgmentStepReasoningCorrectly"] / stats_by_step["reasoning_steps"] * 100, 100)
+                print_padded_line(f"LabelJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的推理步骤占比")
+                writer.writerow([f"LabelJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的推理步骤占比"])
+            if stats_by_step["calculation_steps"] > 0:
+                temp = min(stats_by_step["LLMJudgmentStepCalculatedCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
+                print_padded_line(f"LLMJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的计算步骤占比")
+                writer.writerow([f"LLMJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的计算步骤占比"])
+            if stats_by_step["calculation_steps"] > 0:
+                temp = min(stats_by_step["LLMJudgmentStepEquationCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
+                print_padded_line(f"LLMJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式占比")
+                writer.writerow([f"LLMJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式占比"])
+            if stats_by_step["reasoning_steps"] > 0:
+                temp = min(stats_by_step["LLMJudgmentStepReasoningCorrectly"] / stats_by_step["reasoning_steps"] * 100, 100)
+                print_padded_line(f"LLMJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理步骤占比")
+                writer.writerow([f"LLMJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理步骤占比"])
+
+        # 用于存储正确判断的样例数
+        total_cases = stats_by_case['total_cases']
+        if total_cases > 0:
+            print("案例统计比率及其解释:")
+            writer.writerow(["案例统计比率及其解释"])
+            for key, value in stats_by_case.items():
+                if key != 'total_cases':  # 避免除以自己
+                    explanation = {
+                        'only_calculation_cases': "仅包含计算步骤的样例占比",
+                        'calculation_and_reasoning_cases': "包含计算和推理步骤的样例占比",
+                        'only_reasoning_cases': "仅包含推理步骤的样例占比",
+                        'LabelJudgmentCaseCalculatedCorrectly': "人工标签判断计算正确的样例占比",
+                        'LabelJudgmentCaseEquationCorrectly': "人工标签判断计算公式正确的样例占比",
+                        'LabelJudgmentCaseReasoningCorrectly': "人工标签判断推理正确的样例占比",
+                        'LLMJudgmentCaseCalculatedCorrectly': "LLM判断计算步骤正确的样例占比",
+                        'LLMJudgmentCaseEquationCorrectly': "LLM判断计算公式正确的样例占比",
+                        'LLMJudgmentCaseReasoningCorrectly': "LLM判断推理步骤正确的样例占比",
+                        'correct_label_cases': "标签判断整体正确的样例占比",
+                        'correct_explain_cases': "解释整体正确的样例占比",
+                        'sympy_count': "使用SymPy的样例占比",
+                        'python_code_count': "使用Python编程的样例占比",
+                    }.get(key, "未知统计指标")
+                    percent_value = value / total_cases * 100
+                    print_padded_line(f"{key} 样例占比", f"{percent_value:.2f}%", explanation)
+                    writer.writerow([f"{key} 样例占比", f"{percent_value:.2f}%", explanation])
+            print("细分样例统计比率及其解释:")
+            writer.writerow(["细分样例统计比率及其解释"])
+            if (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) > 0:
+                temp = min(stats_by_case["LabelJudgmentCaseCalculatedCorrectly"] / (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"])  * 100, 100)
+                print_padded_line(f"LabelJudgmentCaseCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确计算的计算样例占比")
+                writer.writerow([f"LabelJudgmentCaseCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确计算的计算样例占比"])
+                temp = min(stats_by_case["LabelJudgmentCaseEquationCorrectly"] / (stats_by_case ["only_calculation_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
+                print_padded_line(f"LabelJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式样例占比")
+                writer.writerow([f"LabelJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式样例占比"])
+            if (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) > 0:
+                temp = min(stats_by_case["LabelJudgmentCaseReasoningCorrectly"] / (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
+                print_padded_line(f"LabelJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的样例占比")
+                writer.writerow([f"LabelJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的样例占比"])
+            if (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) > 0:
+                temp = min(stats_by_case["LLMJudgmentCaseCalculatedCorrectly"] / (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
+                print_padded_line(f"LLMJudgmentCaseCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的样例步骤占比")
+                writer.writerow([f"LLMJudgmentCaseCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的样例步骤占比"])
+                temp = min(stats_by_case["LLMJudgmentCaseEquationCorrectly"] / (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
+                print_padded_line(f"LLMJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式的样例占比")
+                writer.writerow([f"LLMJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式的样例占比"])
+            if (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) > 0:
+                temp = min(stats_by_case["LLMJudgmentCaseReasoningCorrectly"] / (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
+                print_padded_line(f"LLMJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理的样例占比")
+                writer.writerow([f"LLMJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理的样例占比"])
 
 def Check2_CalculateAccuracy(input_file_path):
     # 根据需要修改文件路径
 
     # 检查filename中"Step"的位置并插入"Check2"
-    output_file_path = input_file_path.replace("Step4", "Check2Step4")
+    output_file_path = input_file_path.replace("Step4", "Check2Step4").replace("step4", "Check2Step4")
     
     processed_data = read_processed_jsonl(output_file_path)
     json_data = read_jsonl(input_file_path)
     correct_judgments_by_step, correct_judgments_by_case = analyze_data(json_data, processed_data, output_file_path)
     
     # 打印统计信息
-    print_statistics(correct_judgments_by_step, correct_judgments_by_case)
+    output_file_path2 = output_file_path.replace(".jsonl", "_statistics.csv")
+    print_statistics(correct_judgments_by_step, correct_judgments_by_case, output_file_path2)
 
 def main():
     input_file_path  = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-10.jsonl'

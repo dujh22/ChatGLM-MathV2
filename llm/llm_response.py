@@ -1,8 +1,18 @@
-from use_gpt_api_for_glm_generate import gpt_generate
-from chatglm import ChatGLM
-from config import CRITIC_URL # 从config.py中导入CRITIC_URL
-from config import TGI_URL # Import TGI_URL from config.py
+import json  # 导入json模块，用于处理JSON数据格式
+import random  # 导入random模块，用于生成随机数
+import requests  # 导入requests模块，用于HTTP请求
+import openai  # 导入openai模块，用于调用OpenAI的API
+from llm.use_gpt_api_for_glm_generate import gpt_generate
+from llm.chatglm import ChatGLM
+from llm.config import CRITIC_URL # 从config.py中导入CRITIC_URL
+from llm.config import TGI_URL # Import TGI_URL from config.py
+# from chatglm import ChatGLM
+# from config import CRITIC_URL # 从config.py中导入CRITIC_URL
+# from config import TGI_URL # Import TGI_URL from config.py
 ChatGLM = ChatGLM()
+
+TEMPERATURE = 0.9  # 设置生成文本时的温度参数
+TOPP = 0.2  # 设置生成文本时的Top-p参数
 
 def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
     '''
@@ -100,7 +110,9 @@ def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_r
 
 # 这里设置使用的llm进行生成，注意在本项目中只有这里一个地方进行相关设置
 def llm_response(prompt, use_glm_or_gpt = 'glm'):
-    response = "ERROR for LLM"
+    # print(prompt[:10])
+    response = ""
+    # return response
     for i in range(10):
         if use_glm_or_gpt == 'glm':
             try:
@@ -118,7 +130,7 @@ def llm_response(prompt, use_glm_or_gpt = 'glm'):
 
 # 这里设置使用的llm进行生成，注意在本项目中只有这里一个地方进行相关设置
 def llm_response2(prompt, use_glm_or_gpt = 'glm'):
-    response = "ERROR for LLM"
+    response = ""
     for i in range(10):
         if use_glm_or_gpt == 'glm':
             try:
@@ -137,7 +149,7 @@ def llm_response2(prompt, use_glm_or_gpt = 'glm'):
 USE_GLM_OR_GPT = 'glm'
 
 def llm_response3(prompt, use_glm_or_gpt = USE_GLM_OR_GPT):
-    response = "ERROR for LLM"
+    response = ""
     for i in range(10):
         if use_glm_or_gpt == 'glm':
             try:
@@ -158,3 +170,13 @@ def llm_response3(prompt, use_glm_or_gpt = USE_GLM_OR_GPT):
             except:
                 continue
     return response
+
+
+def main():
+    user = input("Q：")
+    print("A: ", llm_response(user, 'glm'))
+    print("A2: ", llm_response(user, 'gpt'))
+
+if __name__ == "__main__":
+    while True:
+        main()

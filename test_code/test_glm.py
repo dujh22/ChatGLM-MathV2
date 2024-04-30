@@ -1,6 +1,6 @@
 # 适用版本 openai == 1.14.3
 from openai import OpenAI
-import config
+import llm.config as config
 
 client = OpenAI(api_key=config.GLM_API_KEY, base_url=config.GLM_BASE_URL)
 

@@ -23,8 +23,8 @@ def time_it(func):
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import CRITIC_URL # 从config.py中导入CRITIC_URL
-from config import TGI_URL # Import TGI_URL from config.py
+from llm.config import CRITIC_URL # 从config.py中导入CRITIC_URL
+from llm.config import TGI_URL # Import TGI_URL from config.py
 
 # 本脚本对多进程支持，用于处理大数据
 

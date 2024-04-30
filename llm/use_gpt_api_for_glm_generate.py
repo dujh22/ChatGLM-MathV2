@@ -4,7 +4,7 @@ import json
 import openai
 from tqdm import tqdm
 import os
-import config
+import llm.config as config
 
 # 设定API密钥和基本URL
 openai.api_key = config.GPT_API_KEY

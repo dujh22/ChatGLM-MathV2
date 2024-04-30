@@ -2,7 +2,7 @@ import json
 from openai import OpenAI
 from tqdm import tqdm
 import os
-import config
+import llm.config as config
 
 # GLM API密钥和基本URL
 api_key = config.GLM_API_KEY
