@@ -681,7 +681,8 @@ def Check2_CalculateAccuracy(input_file_path):
     print_statistics(correct_judgments_by_step, correct_judgments_by_case, output_file_path2)
 
 def main():
-    input_file_path  = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-10.jsonl'
+    # input_file_path  = 'F://code//github//ChatGLM-MathV2//data//peiyi9979_Math_Shepherd_for_codeTest_Step4_JudgmentStepReasoningCorrectly//math-shepherd.jsonl_1-10.jsonl'
+    input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//front_step4//test_data100.jsonl"
     Check2_CalculateAccuracy(input_file_path)
 
 if __name__ == "__main__":

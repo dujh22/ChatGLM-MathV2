@@ -334,7 +334,7 @@ output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_d
 
 ```python
 input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
-output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_for_pro.jsonl'
+output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//front//test_data100.jsonl'
 ```
 
 然后运行

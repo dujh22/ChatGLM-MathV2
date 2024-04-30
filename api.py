@@ -120,7 +120,10 @@ def split_response(response): # 使用正则表达式按换行符分割响应文
     # 否则按照句号划分
     else:
         # 使用正则表达式按句号切割非小数点
-        steps = re.split(r'(?<=[^.0-9])\.(?=[^0-9])', response)
+        if '。' in response:
+            steps = re.split(r'。', response)
+        else:
+            steps = re.split(r'(?<=[^.0-9])\.(?=[^0-9])', response)
         steps = [x.strip() for x in steps if len(x.strip()) > 0] # 去除空白字符
         return steps
 

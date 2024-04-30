@@ -1,4 +1,5 @@
 import json
+import csv
 
 def load_jsonl(file_path):
     """
@@ -32,9 +33,9 @@ def compare_question_counts(file_path1, file_path2):
         "questions_only_data2": len(questions_only_data2)
     }
 
-def compare_steps(file_path1, file_path2):
+def compare_steps_and_export_csv(file_path1, file_path2, output_file):
     """
-    比较两个 JSONL 文件中相同问题下生成的步骤数是否不同。
+    比较两个 JSONL 文件中相同问题下生成的步骤数是否不同，并将结果保存到 CSV 文件中。
     """
     data1 = load_jsonl(file_path1)
     data2 = load_jsonl(file_path2)
@@ -43,25 +44,49 @@ def compare_steps(file_path1, file_path2):
     data1.sort(key=lambda x: x['question'])
     data2.sort(key=lambda x: x['questions'])
 
-    # 找出不同的问题及其步骤数
-    different_steps = {}
-    for item1, item2 in zip(data1, data2):
-        question1 = item1['question']
-        question2 = item2['questions']
-        steps1 = len(item1['generated_paths'])
-        steps2 = len(item2['solution'])
+    different_steps = []
+    index1 = 0
+    index2 = 0
 
-        if question1 != question2:
-            print("question1", question1[:10])
-            print("question2", question2[:10])
-        
-        if steps1 != steps2:
-            different_steps[question1] = {
-                'steps1': steps1, 
-                'steps2': steps2, 
-                #'step1_detail': {it["step"] for it in item1['generated_paths']},
-                #'step2_detail': {it for it in item2['solution']},
-            }
+    with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+        fieldnames = ['question', 'steps1', 'steps2']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        while index1 < len(data1) and index2 < len(data2):
+            item1 = data1[index1]
+            item2 = data2[index2]
+            question1 = item1['question']
+            question2 = item2['questions']
+
+            if question1 == question2:
+                steps1 = len(item1['generated_paths'])
+                steps2 = len(item2['solution'])
+
+                if steps1 != steps2:
+                    writer.writerow({'question': question1, 'steps1': steps1, 'steps2': steps2})
+
+                index1 += 1
+                index2 += 1
+            elif question1 < question2:
+                writer.writerow({'question': question1, 'steps1': len(item1['generated_paths']), 'steps2': 0})
+                index1 += 1
+            else:
+                writer.writerow({'question': question2, 'steps1': 0, 'steps2': len(item2['solution'])})
+                index2 += 1
+
+        # 处理剩余的条目
+        while index1 < len(data1):
+            item1 = data1[index1]
+            writer.writerow({'question': item1['question'], 'steps1': len(item1['generated_paths']), 'steps2': 0})
+            index1 += 1
+
+        while index2 < len(data2):
+            item2 = data2[index2]
+            writer.writerow({'question': item2['question'], 'steps1': 0, 'steps2': len(item2['solution'])})
+            index2 += 1
+
+    print("CSV 文件已生成。")
 
     return different_steps
 
@@ -78,15 +103,15 @@ if __name__ == "__main__":
     
     
     
-    # differences = compare_steps(file_path1, file_path2)
-    # if differences:
-    #     print("以下问题的步骤数不同：")
-    #     for question, steps in differences.items():
-    #         print(f"问题：{question}")
-    #         print(f"文件1的步骤数：{steps['steps1']}")
-    #         print(f"文件2的步骤数：{steps['steps2']}")
-    #         #print(f"文件1的细节:{steps['step1_detail']}")
-    #         #print(f"文件2的细节:{steps['step2_detail']}")
-    #         print()
-    # else:
-    #     print("两个文件中相同问题的步骤数相同。")
+    differences = compare_steps_and_export_csv(file_path1, file_path2, "output_temp.csv")
+    if differences:
+        print("以下问题的步骤数不同：")
+        for question, steps in differences.items():
+            print(f"问题：{question[:10]}")
+            print(f"文件1的步骤数：{steps['steps1']}")
+            print(f"文件2的步骤数：{steps['steps2']}")
+            #print(f"文件1的细节:{steps['step1_detail']}")
+            #print(f"文件2的细节:{steps['step2_detail']}")
+            print()
+    else:
+        print("两个文件中相同问题的步骤数相同。")
