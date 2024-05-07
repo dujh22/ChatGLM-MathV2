@@ -24,6 +24,7 @@ def time_it(func):
 import os
 import json
 import re
+import sys
 from utils.get_data_for_codeTest import get_data_for_codeTest
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from Step2_IsCalculationOrReasoning import Step2_IsCalculationOrReasoning
@@ -62,20 +63,21 @@ def replace_calculated_result(content, equations, equations_need, equations_corr
             variable = variable.strip()
             original_result = original_result.strip()
             
-            # 构造用于搜索和替换的正则表达式
-            search_pattern = re.escape(variable) + r'\s*=\s*' + re.escape(original_result)
-            replace_pattern = f'{variable} = {result[i]}'
-            
-            # 替换等式
-            content = re.sub(search_pattern, replace_pattern, content)
-            
-            # 替换全文中的原结果
-            content = re.sub(r'\b' + re.escape(original_result) + r'\b', result[i], content)
+            if variable != "":
+                # 构造用于搜索和替换的正则表达式
+                search_pattern = re.escape(variable) + r'\s*=\s*' + re.escape(original_result)
+                replace_pattern = f'{variable} = {result[i]}'
+                
+                # 替换等式
+                content = re.sub(search_pattern, replace_pattern, content)
+                
+                # 替换全文中的原结果
+                content = re.sub(r'\b' + re.escape(original_result) + r'\b', result[i], content)
 
-            # 等式本身是不正确的，还需要修改等式本身
-            if equations_need[i] == 0:
-                if equations_correct_format[i] != "":
-                    content = content.replace(variable, str(equations_correct_format[i]))
+                # 等式本身是不正确的，还需要修改等式本身
+                if equations_need[i] == 0:
+                    if equations_correct_format[i] != "":
+                        content = content.replace(variable, str(equations_correct_format[i]))
                 
     return content
 
@@ -470,7 +472,7 @@ def process_jsonl_file_concurrent(source_path, dest_path):
         file.writelines(results)
 
 
-def process_jsonl_file_concurrent2(source_path, dest_path):
+def process_jsonl_file_concurrent2(source_path, dest_path, max_workers = 10):
     processed_questions = set()
     
     # 读取已处理的问题
@@ -495,7 +497,7 @@ def process_jsonl_file_concurrent2(source_path, dest_path):
                 continue
     
     # 使用 ThreadPoolExecutor 来并发处理每一行
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(process_line, line): line for line in lines_to_process}
         
         with tqdm(total=len(futures), desc='Processing lines') as progress:
@@ -507,7 +509,7 @@ def process_jsonl_file_concurrent2(source_path, dest_path):
                     progress.update(1)  # 更新进度条
 
 @time_it
-def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder):
+def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder, max_workers = 10):
     
     print("第三步判断单步计算是否正确,包括公式的正确性和结果的正确性……")
 
@@ -524,7 +526,7 @@ def Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder):
             # 并行处理
             # process_jsonl_file_concurrent(source_path, dest_path)
             # 并行处理，保留检查点
-            process_jsonl_file_concurrent2(source_path, dest_path)
+            process_jsonl_file_concurrent2(source_path, dest_path, max_workers)
 
             # 可视化结果输出，用于debug
             Check1_JsonlVisualization(dest_path) 
@@ -554,9 +556,15 @@ def main2():
     Step3_JudgmentStepCalculatedCorrectly(target_folder2, target_folder3)
 
 def main():
-    source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step2'
-    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step3'    
-    Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder)
+    if len(sys.argv) > 3:
+        source_folder = sys.argv[1]
+        target_folder = sys.argv[2]
+        max_workers = int(sys.argv[3])
+    else:
+        source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step2'
+        target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step3'    
+        max_workers = 10
+    Step3_JudgmentStepCalculatedCorrectly(source_folder, target_folder, max_workers=max_workers)
 
 if __name__ == '__main__':
     main()

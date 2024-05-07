@@ -20,6 +20,7 @@ def time_it(func):
 import os
 import json
 import re
+import sys
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import concurrent.futures
@@ -170,7 +171,8 @@ def process_jsonl_file_concurrent2(source_path, dest_path, chunk_size=1000, star
             # 计算acc
             Check2_CalculateAccuracy(save_file_name)
 
-def process_jsonl_file_concurrent2(source_path, dest_path):
+# 采用set来区分已处理和未处理的行
+def process_jsonl_file_concurrent3(source_path, dest_path, max_workers=10):
     processed_questions = set()
     
     # 读取已处理的问题
@@ -195,7 +197,7 @@ def process_jsonl_file_concurrent2(source_path, dest_path):
                 continue
     
     # 使用 ThreadPoolExecutor 来并发处理每一行
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(process_line, line): line for line in lines_to_process}
         
         with tqdm(total=len(futures), desc='Processing lines') as progress:
@@ -209,7 +211,7 @@ def process_jsonl_file_concurrent2(source_path, dest_path):
 
 
 @time_it
-def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
+def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder, max_workers = 10):
     
     print("Step4: 判断步骤是否推理正确……")
 
@@ -223,7 +225,7 @@ def Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder):
             dest_path = os.path.join(target_folder, filename)
             # process_jsonl_file(source_path, dest_path)
             # process_jsonl_file_concurrent(source_path, dest_path)
-            process_jsonl_file_concurrent2(source_path, dest_path)
+            process_jsonl_file_concurrent3(source_path, dest_path, max_workers)
 
             # 可视化结果输出，用于debug
             Check1_JsonlVisualization(dest_path)
@@ -261,9 +263,15 @@ def main2():
     Step4_JudgmentStepReasoningCorrectly(target_folder3, target_folder4)
 
 def main():
-    source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step3'
-    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step4' 
-    Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder)
+    if len(sys.argv) > 3:
+        source_folder = sys.argv[1]
+        target_folder = sys.argv[2]
+        max_workers = int(sys.argv[3])
+    else:
+        source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step3'
+        target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step4' 
+        max_workers = 10
+    Step4_JudgmentStepReasoningCorrectly(source_folder, target_folder, max_workers)
 
 if __name__ == '__main__':
     main()

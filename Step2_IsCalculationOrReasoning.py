@@ -7,6 +7,7 @@
 import os
 import json
 import re
+import sys
 from Step1_SplitByRow_forMathShepherd import Step1_SplitByRow_forMathShepherd
 from utils.get_data_for_codeTest import get_data_for_codeTest
 from tqdm import tqdm
@@ -69,8 +70,12 @@ def main2():
     Step2_IsCalculationOrReasoning(target_folder1, target_folder2)
 
 def main():
-    source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step1'
-    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step2'
+    if len(sys.argv) > 2:
+        source_folder = sys.argv[1]
+        target_folder = sys.argv[2]
+    else:
+        source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step1'
+        target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step2'
     Step2_IsCalculationOrReasoning(source_folder, target_folder)
 
 

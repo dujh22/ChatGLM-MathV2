@@ -1,6 +1,7 @@
 import json
 from statistics import mean
 import csv
+import sys
 
 # 读取JSONL文件
 def read_jsonl(file_path):
@@ -134,8 +135,12 @@ def calculate_accuracy(data, output_file):
 
 # 主函数
 def main():
-    file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2.jsonl'
-    output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2_statistics.csv'
+    if len(sys.argv) > 2:
+        file_path = sys.argv[1]
+        output_file_path = sys.argv[2]
+    else:
+        file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2.jsonl'
+        output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2_statistics.csv'
     data = read_jsonl(file_path)
     calculate_accuracy(data, output_file_path)
 

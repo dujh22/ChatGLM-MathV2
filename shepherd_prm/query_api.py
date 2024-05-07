@@ -413,7 +413,7 @@ def prepare_template(prompt_filepath):
     return PROMPT_TEMPLATE
 
 def main():
-    code_test = True # 是否为代码测试
+    code_test = False # 是否为代码测试
     if code_test == False:
         input_file_path = None
         prompt_template_path = None

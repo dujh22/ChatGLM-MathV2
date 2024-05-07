@@ -1,11 +1,18 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import json  # 导入json模块，用于处理JSON数据格式
 import random  # 导入random模块，用于生成随机数
 import requests  # 导入requests模块，用于HTTP请求
 import openai  # 导入openai模块，用于调用OpenAI的API
+
 from llm.use_gpt_api_for_glm_generate import gpt_generate
 from llm.chatglm import ChatGLM
 from llm.config import CRITIC_URL # 从config.py中导入CRITIC_URL
 from llm.config import TGI_URL # Import TGI_URL from config.py
+
+# from use_gpt_api_for_glm_generate import gpt_generate
 # from chatglm import ChatGLM
 # from config import CRITIC_URL # 从config.py中导入CRITIC_URL
 # from config import TGI_URL # Import TGI_URL from config.py
@@ -50,7 +57,7 @@ def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
     # 发送POST请求到服务器并接收响应
     # response = requests.post(self.url, data=payload, headers=self.headers, verify=False)
     response = requests.post(url, json=payload, verify=False)
-    
+
     if response.status_code == 200:  # 如果响应状态码为200，表示成功
         answer = json.loads(response.text)  # 解析响应文本为JSON
         # 下面的注释代码可用于处理特定的结束情况
@@ -122,7 +129,8 @@ def llm_response(prompt, use_glm_or_gpt = 'glm'):
                 continue
         else:
             try:
-                response = query_chatglm_platform(prompt)
+                response = query_chatglm_tgi(prompt)
+                # response = query_chatglm_platform(prompt)
                 return response
             except:
                 continue

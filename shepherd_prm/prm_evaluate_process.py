@@ -137,7 +137,7 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
     return x  # 返回更新后的字典x
 
 @time_it
-def evaluate_process(x, prompt_key="prompt", process_response_key="generated_paths", reference_answewr_key="reference", max_retry=3, backbone="chatglm_platform", PROMPT_TEMPLATE=None):
+def evaluate_process(x, prompt_key="prompt", process_response_key="generated_paths", reference_answer_key="reference", max_retry=3, backbone="chatglm_platform", PROMPT_TEMPLATE=None):
     '''
         该功能通过使用批判函数根据参考答案对每个回复步骤进行评分来评估生成文本路径的质量，通常用于评估数学问题或类似内容，其正确性可以客观判断。它根据分数计算软标签和硬标签，其中软标签是二进制结果（分数高于阈值）的平均值，而硬标签则表示大部分分数是否通过了阈值。这种评估在教育软件、自动辅导系统或其他需要对生成的回复进行反馈的应用中特别有用。
     '''
@@ -153,14 +153,14 @@ def evaluate_process(x, prompt_key="prompt", process_response_key="generated_pat
             temp_item = {
                 prompt_key: x[prompt_key],  # 提取提示信息
                 "response": step_path,  # 提取响应信息
-                reference_answewr_key: x[reference_answewr_key]  # 提取参考答案信息
+                reference_answer_key: x[reference_answer_key]  # 提取参考答案信息
             }
             result = critic_math_problem(  # 调用批评函数对每个响应进行评分
                 temp_item,
                 backbone=backbone,  # 指定使用的模型后端
                 prompt_key=prompt_key,
                 response_key="response",
-                reference_key=reference_answewr_key,
+                reference_key=reference_answer_key,
                 PROMPT_TEMPLATE=PROMPT_TEMPLATE
             )
             rating = result["critic_result"][0]["rating"]  # 从结果中获取评分
@@ -254,7 +254,7 @@ def select_math_data_by_rating2(data):
     return x  # 返回处理后的数据列表
 
 def main():
-    code_test = True # 是否为代码测试
+    code_test = False # 是否为代码测试
     if code_test == False:
         prompt_template_path = None
         input_file_path = None
@@ -264,14 +264,14 @@ def main():
         backbone = "gpt-3.5-turbo"
         mode = "response"
         process_response_key = "generated_paths"
-        reference_answewr_key = "reference"
+        reference_answer_key = "reference"
     else:
         prompt_template_path = 'F://code//github//ChatGLM-MathV2//shepherd_prm//templates//criticllm_math_template.txt'
         prompt_key = "question"
         response_key = "response"
         reference_key = "solution"
         process_response_key = "generated_paths"
-        reference_answewr_key = "solution"
+        reference_answer_key = "solution"
         # 下面三个参数需要根据mode动态调整
 
         # 如果是生成模式
@@ -297,10 +297,10 @@ def main():
     parser.add_argument("--skip_generated", action="store_true", default=False)  # 是否跳过已生成的响应
     parser.add_argument("--prompt_template", type=str, default=prompt_template_path)  # 添加提示模板的命令行参数
     parser.add_argument("--reference_key", type=str, default=reference_key)  # 指定参考答案键名
-    parser.add_argument("--reference_answewr_key", type=str, default=reference_answewr_key)  # 指定参考答案键名
+    parser.add_argument("--reference_answer_key", type=str, default=reference_answer_key)  # 指定参考答案键名
     parser.add_argument("--response_key", type=str, default=response_key)  # 指定响应键名
-    args = parser.parse_args()  # 解析命令行参数
     parser.add_argument("--process_response_key", type=str, default=process_response_key)  # 指定响应键名
+    parser.add_argument("--num_process", type=int, default=10)  # 添加处理数量的命令行参数
     args = parser.parse_args()  # 解析命令行参数
     
     # 根据指定的模式进行相应的操作
@@ -313,7 +313,8 @@ def main():
                 prompt_key=args.prompt_key,  # 传递prompt_key参数
                 response_key=args.response_key  # 传递response_key参数
             ),
-            is_glm=False  # 指定是否使用GLM模型
+            is_glm=False,  # 指定是否使用GLM模型
+            num_process=args.num_process  # 传递处理数量参数
         )
     elif args.mode == "critic":
         PROMPT_TEMPLATE = prepare_template(args.prompt_template)  # 准备提示模板
@@ -326,10 +327,11 @@ def main():
                 backbone=args.backbone,  # 传递模型参数
                 prompt_key=args.prompt_key,  # 传递prompt_key参数
                 process_response_key=args.process_response_key,  # 传递response_key参数
-                reference_answewr_key=args.reference_answewr_key,
+                reference_answer_key=args.reference_answer_key,
                 PROMPT_TEMPLATE = PROMPT_TEMPLATE
             ),  # 传递reference_key参数
-            is_glm=False  # 指定是否使用GLM模型
+            is_glm=False,  # 指定是否使用GLM模型
+            num_process=args.num_process  # 传递处理数量参数
         )
 
         select_math_data_by_rating(

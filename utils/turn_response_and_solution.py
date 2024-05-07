@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import json
 import os
+import sys
 
 def process_json_line(line):
     data = json.loads(line)
@@ -23,9 +24,12 @@ def turn_response_and_solution(input_file_path, output_file_path):
 
 
 def main():
-        
-    input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
-    output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//front//test_data100.jsonl'
+    if len(sys.argv) > 2:
+        input_file_path = sys.argv[1]
+        output_file_path = sys.argv[2]
+    else:        
+        input_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl'
+        output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//front//test_data100.jsonl'
 
     turn_response_and_solution(input_file_path, output_file_path)
 

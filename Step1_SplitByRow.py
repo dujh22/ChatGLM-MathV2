@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sys
 from tqdm import tqdm
 from utils.highlight_equations import highlight_equations
 
@@ -103,10 +104,13 @@ def Step1_SplitByRow(source_folder, target_folder, data = {}):
     process_files(source_folder, target_folder)
 
 def main():
-    # source_folder = 'F://code//github//ChatGLM-MathV2//raw_data//pipeline_test'
-    # target_folder = 'F://code//github//ChatGLM-MathV2//data//pipeline_test_step1'
-    source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front'
-    target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step1'
+    if len(sys.argv) > 2:
+        source_folder = sys.argv[1]
+        target_folder = sys.argv[2]
+    else:
+        source_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front'
+        target_folder = 'F://code//github//ChatGLM-MathV2//data//test_data100//front_step1'
+
     Step1_SplitByRow(source_folder, target_folder)
 
 if __name__ == '__main__':

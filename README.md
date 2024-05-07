@@ -4,6 +4,10 @@
 
 为了进一步提升大模型求解数学问题的准确性和鲁棒性，本项目通过详尽的pipeline设计，完成了针对大模型数学能力提升用数据集的自动化制备流程。
 
+整体pipeline如下图：
+
+![whiteboard_exported_image](png/6.png)
+
 具体包括三个部分：分别是模型后向评分反馈、模型过程预测标注 和 模型前向自动标注。
 
 详细pipeline见下图：
@@ -218,7 +222,35 @@ def pipeline_file():
 
 ### 2.4 并发执行文件批处理
 
-如果是针对多条数据，建议采用批处理方式，本项目对批处理进行了有效支持，具体运行过程如下：
+如果是针对多条数据，建议采用批处理方式，本项目对批处理进行了有效支持。
+
+为了方便用户一步调用完整pipeline，可以直接采用如下命令（只需要执行这个命令，其他操作无）
+
+```shell
+bash pipeline.bash
+```
+
+或者(windows系统下)
+
+```
+.\pipeline.bat
+```
+
+其中的参数可以进一步根据实际需要调整设置，相关进一步参数用途可参照下面的具体运行过程。
+
+#### 2.4.0 数据预处理
+
+主要采用utils中的三个文件，分别是：
+
+1. get_data_for_codeTest.py：用户从大数据中获得小批量数据
+1. make_test_data.py：用于从math_shepherd数据集转化获得原始测试数据集
+1. judge_data_duplicates_and_languageStats.py：用于对原始测试数据集查重并分析语言
+
+建议采用集合脚本直接一步到位，获得指定数量的，无重，单语或双语数据集
+
+> cd ./utils
+>
+> python  data_preprocessing.py
 
 #### 2.4.1 后向生成结果
 
@@ -227,6 +259,8 @@ def pipeline_file():
 首先修改相关参数：在main函数中
 
 ```python
+code_test = True
+
 backbone = "tgi" # generate用tgi，critic用chatglm_platform
 input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100.jsonl" # 这个是原始文件所在位置
 mode = "response"
@@ -270,6 +304,8 @@ python query_api.py
 首先修改相关参数：在main函数中
 
 ```python
+code_test = True
+
 backbone = "tgi" 
 input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic.jsonl" # 注意修改，是2.4.2的_math_critic
 mode = "generation"
@@ -422,6 +458,26 @@ python Step4_JudgmentStepReasoningCorrectly.py
 
 该脚本会自动调用Check2_CalculateAccuracy.py，最终会在_Check2Step4结尾的输出目录下输出进一步包含评估的结果jsonl文件，同时输出csv文件记录的详细Acc。
 
+#### 2.4.6 数据后处理
+
+在2.4.4和2.4.5结束后，会分别得到两个jsonl文件，在最后有比较进行文件的合并。
+
+这里合并前首先要保证两种是可合并的，所以要进行文件分析，可以采用utils/jsonl_difference_find.py进行；然后再针对同一Question的前向和后向标注进行合并。
+
+为了方便执行，我们将这些步骤封装在一个脚本中，可以直接运行，注意修改相关参数，在main函数中
+
+```shell
+file_path1 = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2.jsonl"
+file_path2 = "F://code//github//ChatGLM-MathV2//data//test_data100//front_Check2Step4//test_data100.jsonl"
+output_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//pipeline_merge//test_data100.jsonl"
+```
+
+然后运行
+
+```shell
+python jsonl_file_merge.py
+```
+
 ## 3. 辅助函数说明
 
 主要分步在几个子文件内：
@@ -437,6 +493,8 @@ python Step4_JudgmentStepReasoningCorrectly.py
 1. judge_data_duplicates_and_languageStats.py：处理文件夹中的所有jsonl文件，查重并分析语言
 1. math_chatglm_raw_data_standard.py：math_chatglm_raw_data数据集标准化
 1. run_python_func.py：用于自动化执行python脚本
+1. data_download.py：用于huggingface数据集下载
+1. jsonl_difference_find：用于判断两种标注方式获得的数据集是否存在不同的（无法合并的）标志位，针对存在的不同会输出csv文件
 
 ### 3.2 llm
 
