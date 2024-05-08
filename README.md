@@ -242,7 +242,11 @@ bash pipeline.bash
 .\pipeline.bat
 ```
 
+这个批处理脚本涵盖了数据预处理、API查询、数据评分、路径预测、准确性计算和自动标记等多个阶段。
+
 其中的参数可以进一步根据实际需要调整设置，相关进一步参数用途可参照下面的具体运行过程。
+
+【也可以注意到存在一个pipeline_zh.bat，里面进行了相关注释！！】
 
 #### 2.4.0 数据预处理
 
@@ -466,6 +470,8 @@ python Step4_JudgmentStepReasoningCorrectly.py
 
 #### 2.4.6 数据后处理
 
+> 目前2.4.6已经被合并到2.4.1-2.4.5内，无需进行额外的后处理
+
 在2.4.4和2.4.5结束后，会分别得到两个jsonl文件，在最后有比较进行文件的合并。
 
 这里合并前首先要保证两种是可合并的，所以要进行文件分析，可以采用utils/jsonl_difference_find.py进行；然后再针对同一Question的前向和后向标注进行合并。
@@ -482,6 +488,22 @@ output_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//pipeli
 
 ```shell
 python jsonl_file_merge.py
+```
+
+#### 2.4.7 计算指标
+
+通过对输出结果的最终统计，计算混淆矩阵，包括准确率、精确率和召回率等
+为了方便执行，我们将这些步骤封装在一个脚本中，可以直接运行，注意修改相关参数，在main函数中
+
+```shell
+file_path = 'F://code//github//ChatGLM-MathV2//data//math_shepherd_test_data10//front_Check2Step4//math_shepherd_test_data10.jsonl'
+output_file_path = 'F://code//github//ChatGLM-MathV2//data//math_shepherd_test_data10//front_Check2Step4//math_shepherd_test_data10_ConfusionMatrix.csv'
+```
+
+然后运行
+
+```shell
+python Check4_CalculateConfusionMatrix.py
 ```
 
 ## 3. 辅助函数说明

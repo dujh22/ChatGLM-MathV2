@@ -406,8 +406,10 @@ def check_calculation(info, question, history, backbone="tgi", url=TGI_URL):
                 info['StepCalculatedCorrectlyResult'].append(f"{actual_result}")
     else:
         # 遍历所有匹配项进行检查
-        for expr in info['equation']: # expr变量会接收表达式的内容（如"20*40"），而expected_result变量会接收表达式的结果（如"800"）。
+        for raw_expr in info['equation']: # expr变量会接收表达式的内容（如"20*40"），而expected_result变量会接收表达式的结果（如"800"）。
             # 找到等号的位置，等号前是expr，等号后是expected_result
+            expr = raw_expr
+            expected_result = raw_expr
             # 去除头尾的 <<
             expr = expr.lstrip("<")
             # 如果还存在=，保留=前面的，如果不存在=，那就是其本身

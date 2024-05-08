@@ -101,9 +101,9 @@ def process_line(line, backbone = "tgi", url = TGI_URL):
             if info['is_calculation_or_reasoning'] == 1: # 如果是计算步
                 info['JudgmentStepReasoningCorrectly'], info['StepReasoningCorrectlyResult'] = 1, "This is a calculation step."
                 # 判断整个题目的正确性
-                if any(info['JudgmentStepCalculatedCorrectly'] == 0):
+                if any(item for item in info['JudgmentStepCalculatedCorrectly']) == 0:
                     data['JudgmentAllCorrectly'] = 0
-                elif any(info['JudgmentStepEquationCorrectly'] == 0):
+                elif any(item for item in info['JudgmentStepEquationCorrectly']) == 0:
                     data['JudgmentAllCorrectly'] = 0
             else:
                 # 判断并添加新键

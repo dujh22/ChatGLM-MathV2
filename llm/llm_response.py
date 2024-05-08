@@ -2,6 +2,9 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# import hunter # 用于调试
+# hunter.trace(module=__name__)
+
 import time
 import json  # 导入json模块，用于处理JSON数据格式
 import random  # 导入random模块，用于生成随机数

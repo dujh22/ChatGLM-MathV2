@@ -1,17 +1,17 @@
 @echo off
 
 SET project_path=F://code//github//ChatGLM-MathV2//
-SET num_parallel_process=1
+SET num_parallel_process=10
 cd %project_path%
 
 echo Starting the data preprocessing pipeline...
 
 cd %project_path%utils
 SET dataset=math_shepherd
-SET has_label=hasset
-SET has_response=has
+SET has_label=hasnot
+SET has_response=hasnot
 SET input_file_path=%project_path%raw_data//peiyi9979_Math_Shepherd//math-shepherd.jsonl
-SET num_points=10
+SET num_points=100
 SET new_folder_suffix=math_shepherd_test_data%num_points%
 SET language=en
 SET output_file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%.jsonl
@@ -42,7 +42,7 @@ SET backbone=tgi
 SET input_file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%_tgi.jsonl
 SET mode=critic
 SET num_process=%num_parallel_process%
-SET url=http://172.18.64.65:8080/generate
+SET url=http://172.18.64.55:8080/generate
 
 python query_api.py --input_file %input_file_path% --prompt_template %prompt_template_path% --prompt_key %prompt_key% --response_key %response_key% --reference_key %reference_key% --backbone %backbone% --mode %mode% --num_process %num_process% --url %url%
 
@@ -71,12 +71,14 @@ SET backbone=tgi
 SET input_file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%_tgi_math_critic_path.jsonl
 SET mode=critic
 SET num_process=%num_parallel_process%
-SET url=http://172.18.64.65:8080/generate
+SET url=http://172.18.64.55:8080/generate
 
 python prm_evaluate_process.py --input_file %input_file_path% --prompt_template %prompt_template_path% --prompt_key %prompt_key% --response_key %response_key% --reference_key %reference_key% --process_response_key %process_response_key% --reference_answer_key %reference_answer_key% --backbone %backbone% --mode %mode% --num_process %num_process% --url %url%
 
 echo Forward process path evaluation completed.
 echo Calculating accuracy...
+
+cd %project_path%
 
 SET file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%_tgi_math_critic_path_math_critic2.jsonl
 SET output_file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%_tgi_math_critic_path_math_critic2_statistics.csv
@@ -88,7 +90,7 @@ echo Starting forward automatic labeling...
 
 cd %project_path%utils
 
-SET input_file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%SET file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%_tgi_math_critic_path_math_critic2.jsonl
+SET input_file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%_tgi_math_critic_path_math_critic2.jsonl
 SET output_file_path=%project_path%data//%new_folder_suffix%//front//%new_folder_suffix%.jsonl
 python turn_response_and_solution.py %input_file_path% %output_file_path%
 
@@ -121,12 +123,33 @@ SET max_words=%num_parallel_process%
 SET backbone1=tgi
 SET url1=http://172.18.64.8:8080/generate
 SET backbone2=tgi
-SET url2=http://172.18.64.65:8080/generate
+SET url2=http://172.18.64.55:8080/generate
 python Step4_JudgmentStepReasoningCorrectly.py %source_folder% %target_folder% %max_words% %backbone1% %url1% %backbone2% %url2%
 
 echo Forward automatic labeling finished Step4_JudgmentStepReasoningCorrectly.
 
 echo Forward automatic labeling completed.
+
+echo Forward process path evaluation completed.
+
+echo Calculating accuracy2...
+
+SET file_path=%project_path%data//%new_folder_suffix%//front_Check2Step4//%new_folder_suffix%.jsonl
+SET output_file_path=%project_path%data//%new_folder_suffix%//%new_folder_suffix%_tgi_math_critic_path_math_critic2_statistics2.csv
+
+python Check3_CalculatePathPredictAccuracy.py %file_path% %output_file_path%
+
+echo Accuracy2 calculation completed.
+
+echo Calculating confusion matrix...
+
+SET file_path=%project_path%data//%new_folder_suffix%//front_Check2Step4//%new_folder_suffix%.jsonl
+SET output_file_path=%project_path%data//%new_folder_suffix%//front_Check2Step4//%new_folder_suffix%_ConfusionMatrix.csv
+
+python Check4_CalculateConfusionMatrix.py %file_path% %output_file_path%
+
+echo Confusion matrix calculation completed.
+
 echo All steps completed successfully!
 
 pause

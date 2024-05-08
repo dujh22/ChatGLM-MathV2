@@ -376,7 +376,7 @@ def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", res
         for _ in range(max_retry):  # 尝试最大重试次数
             input_data = PROMPT_TEMPLATE.format(
                 problem=prompt,
-                reference_answer=x[reference_key],
+                reference_answer=x.get(reference_key, ""),
                 assistant_ansiwer=resp
             )  # 格式化输入数据
 

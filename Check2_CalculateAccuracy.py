@@ -595,26 +595,44 @@ def print_statistics(stats_by_step, stats_by_case, output_file_path):
                 temp = min(stats_by_step["LabelJudgmentStepCalculatedCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
                 print_padded_line(f"LabelJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确计算的计算步骤占比")
                 writer.writerow([f"LabelJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确计算的计算步骤占比"])
+            else:
+                print_padded_line(f"LabelJudgmentStepCalculatedCorrectly 步骤占比", "N/A", "根据人工标签正确计算的计算步骤占比")
+                writer.writerow([f"LabelJudgmentStepCalculatedCorrectly 步骤占比", "N/A", "根据人工标签正确计算的计算步骤占比"])
             if stats_by_step["calculation_steps"] > 0:
                 temp = min(stats_by_step["LabelJudgmentStepEquationCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
                 print_padded_line(f"LabelJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式占比")
                 writer.writerow([f"LabelJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式占比"])
+            else:
+                print_padded_line(f"LabelJudgmentStepEquationCorrectly 步骤占比", "N/A", "根据人工标签正确的计算公式占比")
+                writer.writerow([f"LabelJudgmentStepEquationCorrectly 步骤占比", "N/A", "根据人工标签正确的计算公式占比"])
             if stats_by_step["reasoning_steps"] > 0:
                 temp = min(stats_by_step["LabelJudgmentStepReasoningCorrectly"] / stats_by_step["reasoning_steps"] * 100, 100)
                 print_padded_line(f"LabelJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的推理步骤占比")
                 writer.writerow([f"LabelJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的推理步骤占比"])
+            else:
+                print_padded_line(f"LabelJudgmentStepReasoningCorrectly 步骤占比", "N/A", "根据人工标签正确推理的推理步骤占比")
+                writer.writerow([f"LabelJudgmentStepReasoningCorrectly 步骤占比", "N/A", "根据人工标签正确推理的推理步骤占比"])
             if stats_by_step["calculation_steps"] > 0:
                 temp = min(stats_by_step["LLMJudgmentStepCalculatedCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
                 print_padded_line(f"LLMJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的计算步骤占比")
                 writer.writerow([f"LLMJudgmentStepCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的计算步骤占比"])
+            else:
+                print_padded_line(f"LLMJudgmentStepCalculatedCorrectly 步骤占比", "N/A", "LLM判断正确计算的计算步骤占比")
+                writer.writerow([f"LLMJudgmentStepCalculatedCorrectly 步骤占比", "N/A", "LLM判断正确计算的计算步骤占比"])
             if stats_by_step["calculation_steps"] > 0:
                 temp = min(stats_by_step["LLMJudgmentStepEquationCorrectly"] / stats_by_step["calculation_steps"] * 100, 100)
                 print_padded_line(f"LLMJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式占比")
                 writer.writerow([f"LLMJudgmentStepEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式占比"])
+            else:
+                print_padded_line(f"LLMJudgmentStepEquationCorrectly 步骤占比", "N/A", "LLM判断正确公式占比")
+                writer.writerow([f"LLMJudgmentStepEquationCorrectly 步骤占比", "N/A", "LLM判断正确公式占比"])
             if stats_by_step["reasoning_steps"] > 0:
                 temp = min(stats_by_step["LLMJudgmentStepReasoningCorrectly"] / stats_by_step["reasoning_steps"] * 100, 100)
                 print_padded_line(f"LLMJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理步骤占比")
                 writer.writerow([f"LLMJudgmentStepReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理步骤占比"])
+            else:
+                print_padded_line(f"LLMJudgmentStepReasoningCorrectly 步骤占比", "N/A", "LLM判断正确推理步骤占比")
+                writer.writerow([f"LLMJudgmentStepReasoningCorrectly 步骤占比", "N/A", "LLM判断正确推理步骤占比"])
 
         # 用于存储正确判断的样例数
         total_cases = stats_by_case['total_cases']
@@ -650,10 +668,18 @@ def print_statistics(stats_by_step, stats_by_case, output_file_path):
                 temp = min(stats_by_case["LabelJudgmentCaseEquationCorrectly"] / (stats_by_case ["only_calculation_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
                 print_padded_line(f"LabelJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式样例占比")
                 writer.writerow([f"LabelJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确的计算公式样例占比"])
+            else:
+                print_padded_line(f"LabelJudgmentCaseCalculatedCorrectly 步骤占比", "N/A", "根据人工标签正确计算的计算样例占比")
+                writer.writerow([f"LabelJudgmentCaseCalculatedCorrectly 步骤占比", "N/A", "根据人工标签正确计算的计算样例占比"])
+                print_padded_line(f"LabelJudgmentCaseEquationCorrectly 步骤占比", "N/A", "根据人工标签正确的计算公式样例占比")
+                writer.writerow([f"LabelJudgmentCaseEquationCorrectly 步骤占比", "N/A", "根据人工标签正确的计算公式样例占比"])
             if (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) > 0:
                 temp = min(stats_by_case["LabelJudgmentCaseReasoningCorrectly"] / (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
                 print_padded_line(f"LabelJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的样例占比")
                 writer.writerow([f"LabelJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "根据人工标签正确推理的样例占比"])
+            else:
+                print_padded_line(f"LabelJudgmentCaseReasoningCorrectly 步骤占比", "N/A", "根据人工标签正确推理的样例占比")
+                writer.writerow([f"LabelJudgmentCaseReasoningCorrectly 步骤占比", "N/A", "根据人工标签正确推理的样例占比"])
             if (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) > 0:
                 temp = min(stats_by_case["LLMJudgmentCaseCalculatedCorrectly"] / (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
                 print_padded_line(f"LLMJudgmentCaseCalculatedCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确计算的样例步骤占比")
@@ -661,10 +687,18 @@ def print_statistics(stats_by_step, stats_by_case, output_file_path):
                 temp = min(stats_by_case["LLMJudgmentCaseEquationCorrectly"] / (stats_by_case["only_calculation_cases"]  + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
                 print_padded_line(f"LLMJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式的样例占比")
                 writer.writerow([f"LLMJudgmentCaseEquationCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确公式的样例占比"])
+            else:
+                print_padded_line(f"LLMJudgmentCaseCalculatedCorrectly 步骤占比", "N/A", "LLM判断正确计算的样例步骤占比")
+                writer.writerow([f"LLMJudgmentCaseCalculatedCorrectly 步骤占比", "N/A", "LLM判断正确计算的样例步骤占比"])
+                print_padded_line(f"LLMJudgmentCaseEquationCorrectly 步骤占比", "N/A", "LLM判断正确公式的样例占比")
+                writer.writerow([f"LLMJudgmentCaseEquationCorrectly 步骤占比", "N/A", "LLM判断正确公式的样例占比"])
             if (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) > 0:
                 temp = min(stats_by_case["LLMJudgmentCaseReasoningCorrectly"] / (stats_by_case["only_reasoning_cases"] + stats_by_case["calculation_and_reasoning_cases"]) * 100, 100)
                 print_padded_line(f"LLMJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理的样例占比")
                 writer.writerow([f"LLMJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理的样例占比"])
+            else:
+                print_padded_line(f"LLMJudgmentCaseReasoningCorrectly 步骤占比", "N/A", "LLM判断正确推理的样例占比")
+                writer.writerow([f"LLMJudgmentCaseReasoningCorrectly 步骤占比", "N/A", "LLM判断正确推理的样例占比"])
 
 def Check2_CalculateAccuracy(input_file_path, backbone = "chatglm_platform", url = CRITIC_URL):
     # 根据需要修改文件路径

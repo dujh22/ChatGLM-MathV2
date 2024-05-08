@@ -161,7 +161,7 @@ def evaluate_process(x, prompt_key="prompt", process_response_key="generated_pat
             temp_item = {
                 prompt_key: x[prompt_key],  # 提取提示信息
                 "response": step_path,  # 提取响应信息
-                reference_answer_key: x[reference_answer_key]  # 提取参考答案信息
+                reference_answer_key: x.get(reference_answer_key, "")  # 提取参考答案信息
             }
             result = critic_math_problem(  # 调用批评函数对每个响应进行评分
                 temp_item,

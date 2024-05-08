@@ -96,6 +96,7 @@ def data_preprocessing_for_math_shepherd2(input_file_path, output_file_path, num
                 temp_new_data = json.loads(process_json_line(json.dumps(data)))
                 new_data = {}
                 new_data['question'] = temp_new_data['question']
+                question = new_data['question']
                 
                 input_text = data['input']        
                 split_point = input_text.find("Step 1:")
