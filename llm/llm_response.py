@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import time
 import json  # 导入json模块，用于处理JSON数据格式
 import random  # 导入random模块，用于生成随机数
 import requests  # 导入requests模块，用于HTTP请求
@@ -21,12 +22,12 @@ ChatGLM = ChatGLM()
 TEMPERATURE = 0.9  # 设置生成文本时的温度参数
 TOPP = 0.2  # 设置生成文本时的Top-p参数
 
-def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
+def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048, url = CRITIC_URL):
     '''
         该功能用于与基于聊天的模型平台通信，向其发送当前和历史对话数据，然后接收生成的回复。它可以通过温度和top_p 等参数对生成过程进行详细定制，因此适用于需要根据用户输入和以前的对话上下文动态生成回复的交互式应用。
     '''
     # url = "http://xxx:9090/v1/chat/completions"  # 设置API的URL
-    url = CRITIC_URL  # 设置API的URL
+    # url = CRITIC_URL  # 设置API的URL
 
     messages = []  # 初始化消息列表
     for turn in history:  # 遍历历史记录，每一项都包含用户和助手的对话
@@ -71,12 +72,12 @@ def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
 
     return answer  # 返回生成的回答或None
 
-def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_retry=3):
+def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_retry=3, url = TGI_URL):
     '''
         该函数根据对话历史和当前提示构建消息流，然后查询指定 URL 上的文本生成模型。它会调整生成参数，如采样、标记限制和温度，并在出现错误时重试请求。这种功能对于将历史对话上下文整合到响应生成中的系统来说非常典型，因此适用于需要保持连贯和上下文适当的交互的聊天应用或对话系统。
     '''
     # url = "http://xxx:8080/generate"  # 设置API的URL
-    url = TGI_URL 
+    # url = TGI_URL 
     messages = ""  # 初始化消息字符串
     for turn in history:
         ques, ans = turn["prompt"], turn["response"]  # 从历史中获取问题和回答
@@ -116,24 +117,26 @@ def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_r
     return result  # 返回生成的结果或None
 
 # 这里设置使用的llm进行生成，注意在本项目中只有这里一个地方进行相关设置
-def llm_response(prompt, use_glm_or_gpt = 'glm'):
+def llm_response(prompt, backbone, url):
     # print(prompt[:10])
     response = ""
     # return response
     for i in range(10):
-        if use_glm_or_gpt == 'glm':
+        if backbone == 'tgi':
             try:
-                response = query_chatglm_tgi(prompt)
+                response = query_chatglm_tgi(prompt=prompt, url=url)
+                return response
+            except:
+                continue
+        elif backbone == 'chatglm_platform':
+            try:
+                response = query_chatglm_platform(prompt=prompt, url=url)
                 return response
             except:
                 continue
         else:
-            try:
-                response = query_chatglm_tgi(prompt)
-                # response = query_chatglm_platform(prompt)
-                return response
-            except:
-                continue
+            print("采用了未知的backbone", backbone)
+            time.sleep(1000)
     return response
 
 # 这里设置使用的llm进行生成，注意在本项目中只有这里一个地方进行相关设置
@@ -182,8 +185,8 @@ def llm_response3(prompt, use_glm_or_gpt = USE_GLM_OR_GPT):
 
 def main():
     user = input("Q：")
-    print("A: ", llm_response(user, 'glm'))
-    print("A2: ", llm_response(user, 'gpt'))
+    print("A: ", llm_response(user, 'tgi', TGI_URL))
+    print("A2: ", llm_response(user, 'tgi', CRITIC_URL))
 
 if __name__ == "__main__":
     while True:

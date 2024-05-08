@@ -20,6 +20,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from llm.config import TGI_URL # Import TGI_URL from config.py
+from llm.config import CRITIC_URL
 
 import json  # 导入json模块，用于处理JSON数据
 import argparse  # 导入argparse模块，用于处理命令行参数
@@ -31,12 +32,12 @@ import random  # 导入random模块，用于生成随机数
 from query_api import build_training_file, critic_math_problem, prepare_template  # 从query_api模块导入三个函数
 
 
-def query_tgi_completion(prompt):
+def query_tgi_completion(prompt, url = TGI_URL):
     '''
         这段 Python 代码会配置并向文本生成 API 发送 POST 请求，其中的特定参数会影响生成文本的风格和多样性。这些配置的温度和 top_p 值各不相同，会影响文本生成的确定性或创造性。随机模块用于在这些配置之间进行选择，从而在生成过程中引入可变性。这种设置尤其适用于需要可控和多样化文本输出的应用，例如自动内容生成或聊天机器人。
     '''
     # url = "http://xxx:8080/generate"  # 设置API的URL地址
-    url = TGI_URL
+    # url = TGI_URL
     configs = [
         {"temperature": 0.1, "top_p": 0.7},  # 配置列表第一个配置项，温度较低，生成内容较为保守
         {"temperature": 0.9, "top_p": 0.9},  # 配置列表第二个配置项，温度较高，生成内容较为多样
@@ -93,7 +94,7 @@ def split_response(response): # 使用正则表达式按换行符分割响应文
         return steps
 
 @time_it   
-def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code-v3"):
+def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code-v3", url = TGI_URL):
     '''
         该函数处理包含提示和响应详细信息的给定字典 x，为响应的每个步骤生成扩展路径。它使用辅助函数 query_tgi_completion，尝试生成扩展路径，每一步最多可生成三次，以确保稳健的错误处理和重试机制。这种方法适用于需要根据先前步骤顺序生成内容的场景，例如为机器学习模型或自动应答系统创建训练数据。
     '''
@@ -101,7 +102,14 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
     prompt = x[prompt_key]  # 从字典x中获取提示信息
     response = x[response_key]  # 从字典x中获取响应信息
     output = []  # 初始化输出列表，用来存储所有生成的扩展路径
-    steps = split_response(response)  # 使用split_response函数分割响应文本成多个步骤
+
+    if x.get("solution") is None:
+        steps = split_response(response)  # 使用split_response函数分割响应文本成多个步骤
+    else:
+        steps = []
+        for step, info in x["solution"].items():
+            content = re.sub(r"<<[^>]*>>", "", info["content"]) # 去除<<等式>>
+            steps.append(content)
 
     # 遍历每一个步骤
     for idx in range(len(steps)):
@@ -118,7 +126,7 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
             result = None  # 初始化结果变量
             for _ in range(3):  # 最多尝试三次获取生成结果
                 try:
-                    result = query_tgi_completion(query_prompt)  # 调用query_tgi_completion函数尝试获取生成结果
+                    result = query_tgi_completion(prompt=query_prompt, url=url)  # 调用query_tgi_completion函数尝试获取生成结果
                     if result is not None:  # 如果成功获取到结果，终止循环
                         break
                 except Exception as e:
@@ -137,7 +145,7 @@ def generate_process(x, prompt_key, response_key, num_path=3, backbone="glm-code
     return x  # 返回更新后的字典x
 
 @time_it
-def evaluate_process(x, prompt_key="prompt", process_response_key="generated_paths", reference_answer_key="reference", max_retry=3, backbone="chatglm_platform", PROMPT_TEMPLATE=None):
+def evaluate_process(x, prompt_key="prompt", process_response_key="generated_paths", reference_answer_key="reference", max_retry=3, backbone="chatglm_platform", PROMPT_TEMPLATE=None, url = CRITIC_URL):
     '''
         该功能通过使用批判函数根据参考答案对每个回复步骤进行评分来评估生成文本路径的质量，通常用于评估数学问题或类似内容，其正确性可以客观判断。它根据分数计算软标签和硬标签，其中软标签是二进制结果（分数高于阈值）的平均值，而硬标签则表示大部分分数是否通过了阈值。这种评估在教育软件、自动辅导系统或其他需要对生成的回复进行反馈的应用中特别有用。
     '''
@@ -161,7 +169,8 @@ def evaluate_process(x, prompt_key="prompt", process_response_key="generated_pat
                 prompt_key=prompt_key,
                 response_key="response",
                 reference_key=reference_answer_key,
-                PROMPT_TEMPLATE=PROMPT_TEMPLATE
+                PROMPT_TEMPLATE=PROMPT_TEMPLATE,
+                url=url,
             )
             rating = result["critic_result"][0]["rating"]  # 从结果中获取评分
             ratings.append(rating)  # 将评分添加到评分列表
@@ -265,6 +274,7 @@ def main():
         mode = "response"
         process_response_key = "generated_paths"
         reference_answer_key = "reference"
+        url = None
     else:
         prompt_template_path = 'F://code//github//ChatGLM-MathV2//shepherd_prm//templates//criticllm_math_template.txt'
         prompt_key = "question"
@@ -278,15 +288,18 @@ def main():
         # backbone = "tgi" # generate用tgi，critic用chatglm_platform
         # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic.jsonl"
         # mode = "generation"
+        # url = TGI_URL
 
         # 如果是评估模式
         backbone = "chatglm_platform"
         input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path.jsonl"
         mode = "critic"
+        url = CRITIC_URL
 
 
     # 创建命令行解析器
     parser = argparse.ArgumentParser()
+
     # 添加各种命令行参数
     parser.add_argument("--input_file", type=str, default=input_file_path)  # 指定输入文件路径
     parser.add_argument("--mode", type=str, default=mode)  # 指定运行模式
@@ -301,6 +314,8 @@ def main():
     parser.add_argument("--response_key", type=str, default=response_key)  # 指定响应键名
     parser.add_argument("--process_response_key", type=str, default=process_response_key)  # 指定响应键名
     parser.add_argument("--num_process", type=int, default=10)  # 添加处理数量的命令行参数
+    parser.add_argument("--url", type=str, default=url)  # 指定API的URL地址
+
     args = parser.parse_args()  # 解析命令行参数
     
     # 根据指定的模式进行相应的操作
@@ -311,7 +326,8 @@ def main():
             worker_func=partial(
                 generate_process,  # 指定工作函数
                 prompt_key=args.prompt_key,  # 传递prompt_key参数
-                response_key=args.response_key  # 传递response_key参数
+                response_key=args.response_key,  # 传递response_key参数
+                url=args.url  # 传递url参数
             ),
             is_glm=False,  # 指定是否使用GLM模型
             num_process=args.num_process  # 传递处理数量参数
@@ -327,9 +343,10 @@ def main():
                 backbone=args.backbone,  # 传递模型参数
                 prompt_key=args.prompt_key,  # 传递prompt_key参数
                 process_response_key=args.process_response_key,  # 传递response_key参数
-                reference_answer_key=args.reference_answer_key,
-                PROMPT_TEMPLATE = PROMPT_TEMPLATE
-            ),  # 传递reference_key参数
+                reference_answer_key=args.reference_answer_key, # 传递reference_key参数
+                PROMPT_TEMPLATE = PROMPT_TEMPLATE,
+                url=args.url  # 传递url参数
+            ),  
             is_glm=False,  # 指定是否使用GLM模型
             num_process=args.num_process  # 传递处理数量参数
         )

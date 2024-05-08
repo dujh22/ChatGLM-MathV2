@@ -14,7 +14,7 @@ base_folder = base_folder.replace("\\", "//")
 def pipeline_api(question, solution, dataset='test'):
     # 构造数据
     line = {
-        "questions": question,
+        "question": question,
         "solution": solution,
         "dataset": dataset
     }
@@ -44,7 +44,7 @@ def pipeline_api(question, solution, dataset='test'):
     
     # 只保留需要的部分
     need_result = {}
-    need_result["questions"] = result["questions"]
+    need_result["question"] = result["question"]
     need_result['solution'] = {}
     for step, info in result["solution"].items():
         need_result['solution'][step] = {

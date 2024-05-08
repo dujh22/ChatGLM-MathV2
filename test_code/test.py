@@ -285,11 +285,11 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                 temp_true2 = True
             
             if temp_true2 == True:
-                # prompt1 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为计算是正确的。\n\n 请问我的判断是否正确？（是/否）"""
-                prompt1 = f"""I am trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The steps I have used so far to solve the problem are as follows:{history2} \n\n The steps I would like to check now are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the calculation is correct. \n\n May I ask if my judgment is correct? (Yes/No)"""
+                # prompt1 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['question']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为计算是正确的。\n\n 请问我的判断是否正确？（是/否）"""
+                prompt1 = f"""I am trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['question']} \n\n The steps I have used so far to solve the problem are as follows:{history2} \n\n The steps I would like to check now are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the calculation is correct. \n\n May I ask if my judgment is correct? (Yes/No)"""
             else:
-                # prompt1 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步计算是错误的，应该修改为：{temp_content2} 请问我的判断和修改是否正确？\n\n（是/否）"""
-                prompt1 = f"""I'm trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think this step is calculated incorrectly and should be modified as: {temp_content2} Am I correct in my judgment and modification? \n\n (yes/no)"""
+                # prompt1 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['question']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步计算是错误的，应该修改为：{temp_content2} 请问我的判断和修改是否正确？\n\n（是/否）"""
+                prompt1 = f"""I'm trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['question']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think this step is calculated incorrectly and should be modified as: {temp_content2} Am I correct in my judgment and modification? \n\n (yes/no)"""
 
             for i in range(10):
                 try:
@@ -316,11 +316,11 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                 temp_true1 = True
             
             if temp_true1 == True:
-                # prompt2 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步的推理是正确的。\n\n 请问我的判断是否正确？（是/否）"""
-                prompt2 = f"""I am trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the reasoning in this step is correct. \n\n May I ask if my judgment is correct? (Yes/No)"""
+                # prompt2 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['question']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步的推理是正确的。\n\n 请问我的判断是否正确？（是/否）"""
+                prompt2 = f"""I am trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['question']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the reasoning in this step is correct. \n\n May I ask if my judgment is correct? (Yes/No)"""
             else:
-                # prompt2 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['questions']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步的推理是错误的，应该修改为：{step_info2['StepReasoningCorrectlyResult']}。\n\n 请问我的判断是否正确？（是/否）"""
-                prompt2 = f"""I'm trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['questions']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the reasoning in this step is wrong and should be changed to: {step_info2['StepReasoningCorrectlyResult']}. \n\n Is my judgment correct? (Yes/No)"""
+                # prompt2 = f"""我正在尝试检查一个数学问题的求解过程是否计算正确、推理合理。具体问题是：{entry2['question']}。\n\n 我目前采用的解题步骤如下：{history2} \n\n 现在我要检查的步骤是：{step_key2}，内容是：{step_info2['content']}。\n\n 我认为这一步的推理是错误的，应该修改为：{step_info2['StepReasoningCorrectlyResult']}。\n\n 请问我的判断是否正确？（是/否）"""
+                prompt2 = f"""I'm trying to check that the solution to a math problem is computationally correct and reasoned correctly. The specific problem is: {entry2['question']} \n\n The solution steps I have used so far are as follows:{history2} \n\n Now the steps I want to check are:{step_key2} and the content is:{step_info2['content']}. \n\n I think the reasoning in this step is wrong and should be changed to: {step_info2['StepReasoningCorrectlyResult']}. \n\n Is my judgment correct? (Yes/No)"""
             
             for i in range(10):
                 try:

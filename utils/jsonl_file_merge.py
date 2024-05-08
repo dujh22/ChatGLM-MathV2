@@ -28,8 +28,8 @@ def main():
             "new_data2": None
         }
     for id, item in enumerate(new_data2):
-        if item['questions'] in index_dict:
-            index_dict[item['questions']]["new_data2"] = id
+        if item['question'] in index_dict:
+            index_dict[item['question']]["new_data2"] = id
         else:
             index_dict[item['question']] = {
                 "new_data1": None,
@@ -47,7 +47,7 @@ def main():
             if index["new_data1"] is not None and index["new_data2"] is not None:
                 item = new_data1[index["new_data1"]]
                 item['solution'] = new_data2[index["new_data2"]]['solution']
-
+                item['JudgmentAllCorrectly'] = new_data2[index["new_data2"]]['JudgmentAllCorrectly']
                 # 将更新后的字典转换为JSON格式并写入文件
                 json.dump(item, outfile, ensure_ascii=False)
                 outfile.write('\n')  # 确保每个条目在新的一行

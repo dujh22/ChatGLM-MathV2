@@ -2,7 +2,7 @@ import json
 import os
 import csv
 from tqdm import tqdm
-from Step3_JudgmentStepCalculatedCorrectly import replace_calculated_result, llm_response
+from Step3_JudgmentStepCalculatedCorrectly import replace_calculated_result, llm_response, TGI_URL, CRITIC_URL
 
 def read_jsonl(file_path):
     """读取JSONL文件，返回一个包含多个JSON对象的列表，并为每个对象添加一个唯一的索引作为ID。"""
@@ -35,7 +35,7 @@ def append_jsonl(data, file_path):
         json.dump(data, file, ensure_ascii=False)
         file.write('\n')
 
-def llm_judge_response(question, step, info, type):
+def llm_judge_response(question, step, info, type, backbone = "chatglm_platform", url = CRITIC_URL):
     history = ""
     correct_content = "" 
     for temp_step, his in info['history_json'].items():
@@ -77,14 +77,14 @@ def llm_judge_response(question, step, info, type):
 
     for i in range(10):
         try:
-            response = llm_response(prompt, use_glm_or_gpt='glm')
+            response = llm_response(prompt=prompt, backbone=backbone, url=url)
             return response
         except:
             response = ""
             
     return response
 
-def analyze_data(json_data, processed_json_data, output_file_path):
+def analyze_data(json_data, processed_json_data, output_file_path, backbone = "chatglm_platform", url = CRITIC_URL):
     """分析JSON对象列表，计算所需的统计数据。"""
     processed_ids = {entry['id'] for entry in processed_json_data}  # 创建一个包含所有已处理ID的集合
 
@@ -319,7 +319,7 @@ def analyze_data(json_data, processed_json_data, output_file_path):
             continue  # 跳过已处理的数据
         
         correct_judgments_by_case['total_cases'] += 1
-        question = entry['questions']
+        question = entry['question']
         
         total_label_correct = True
         total_explain_correct = True
@@ -392,7 +392,7 @@ def analyze_data(json_data, processed_json_data, output_file_path):
                         total_label_correct = False
 
                 # 检测LLM针对计算步骤的判断是否正确
-                step_info['LLMJudgmentStepCalculatedCorrectly'] = llm_judge_response(question, step_key, step_info, 0)  # 调用生成方法
+                step_info['LLMJudgmentStepCalculatedCorrectly'] = llm_judge_response(question, step_key, step_info, 0, backbone, url)  # 调用生成方法
                 response1 = step_info['LLMJudgmentStepCalculatedCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
                 if type(response1) == str and len(response1) > 0:
@@ -405,7 +405,7 @@ def analyze_data(json_data, processed_json_data, output_file_path):
 
 
                 # 检测LLM针对计算公式的判断是否正确
-                step_info['LLMJudgmentStepEquationCorrectly'] = llm_judge_response(question, step_key, step_info, 1)  # 调用生成方法  
+                step_info['LLMJudgmentStepEquationCorrectly'] = llm_judge_response(question, step_key, step_info, 1, backbone, url)  # 调用生成方法  
                 response1 = step_info['LLMJudgmentStepEquationCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
                 if type(response1) == str and len(response1) > 0:
@@ -436,7 +436,7 @@ def analyze_data(json_data, processed_json_data, output_file_path):
 
 
                 # 检测针对推理步骤的判断是否正确
-                step_info['LLMJudgmentStepReasoningCorrectly'] = llm_judge_response(question, step_key, step_info, 2)  # 调用
+                step_info['LLMJudgmentStepReasoningCorrectly'] = llm_judge_response(question, step_key, step_info, 2, backbone, url)  # 调用
                 response2 = step_info['LLMJudgmentStepReasoningCorrectly']
                 # 获取response的第一句话或者如果没有符号就是完整的response
                 if type(response2) == str and len(response2) > 0:   
@@ -666,7 +666,7 @@ def print_statistics(stats_by_step, stats_by_case, output_file_path):
                 print_padded_line(f"LLMJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理的样例占比")
                 writer.writerow([f"LLMJudgmentCaseReasoningCorrectly 步骤占比", f"{temp:.2f}%", "LLM判断正确推理的样例占比"])
 
-def Check2_CalculateAccuracy(input_file_path):
+def Check2_CalculateAccuracy(input_file_path, backbone = "chatglm_platform", url = CRITIC_URL):
     # 根据需要修改文件路径
 
     # 检查filename中"Step"的位置并插入"Check2"
@@ -674,7 +674,7 @@ def Check2_CalculateAccuracy(input_file_path):
     
     processed_data = read_processed_jsonl(output_file_path)
     json_data = read_jsonl(input_file_path)
-    correct_judgments_by_step, correct_judgments_by_case = analyze_data(json_data, processed_data, output_file_path)
+    correct_judgments_by_step, correct_judgments_by_case = analyze_data(json_data, processed_data, output_file_path, backbone, url)
     
     # 打印统计信息
     output_file_path2 = output_file_path.replace(".jsonl", "_statistics.csv")

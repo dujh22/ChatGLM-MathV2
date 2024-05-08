@@ -19,11 +19,11 @@ def compare_question_counts(file_path1, file_path2):
     data2 = load_jsonl(file_path2)
 
     unique_questions_data1 = len(set(item['question'] for item in data1))
-    unique_questions_data2 = len(set(item['questions'] for item in data2))
+    unique_questions_data2 = len(set(item['question'] for item in data2))
 
-    questions_both = set(item['question'] for item in data1) & set(item['questions'] for item in data2)
-    questions_only_data1 = set(item['question'] for item in data1) - set(item['questions'] for item in data2)
-    questions_only_data2 = set(item['questions'] for item in data2) - set(item['question'] for item in data1)
+    questions_both = set(item['question'] for item in data1) & set(item['question'] for item in data2)
+    questions_only_data1 = set(item['question'] for item in data1) - set(item['question'] for item in data2)
+    questions_only_data2 = set(item['question'] for item in data2) - set(item['question'] for item in data1)
 
     return {
         "unique_questions_data1": unique_questions_data1,
@@ -42,7 +42,7 @@ def compare_steps_and_export_csv(file_path1, file_path2, output_file):
 
     # 按问题对两个数据集进行排序
     data1.sort(key=lambda x: x['question'])
-    data2.sort(key=lambda x: x['questions'])
+    data2.sort(key=lambda x: x['question'])
 
     different_steps = []
     index1 = 0
@@ -57,7 +57,7 @@ def compare_steps_and_export_csv(file_path1, file_path2, output_file):
             item1 = data1[index1]
             item2 = data2[index2]
             question1 = item1['question']
-            question2 = item2['questions']
+            question2 = item2['question']
 
             if question1 == question2:
                 steps1 = len(item1['generated_paths'])

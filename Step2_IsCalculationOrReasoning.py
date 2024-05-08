@@ -30,7 +30,10 @@ def process_jsonl_file(source_path, dest_path):
             if 'solution' in data:
                 for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
                     # 判断并添加新键
-                    info['is_calculation_or_reasoning'] = is_calculation(info['content'])
+                    if info.get("equation") is not None:
+                        info['is_calculation_or_reasoning'] = 1
+                    else:
+                        info['is_calculation_or_reasoning'] = is_calculation(info['content'])
             # 将修改后的数据写回新的JSONL文件
             json.dump(data, dest_file, ensure_ascii=False)
             dest_file.write('\n')

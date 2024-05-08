@@ -32,26 +32,36 @@ def process_json_line(line):
     data = json.loads(line)
 
     # 初始化新的JSON格式
-    new_json = {
-        "questions": data["questions"],
-        "solution": {},
-        "dataset": data.get("dataset", "test"),
-    }
-
-    # 方案拆分
-    split_responses = split_response(data['solution'])
-
-    # 处理每个解决方案部分
-    for i, solution in enumerate(split_responses):
-        new_json["solution"][f"Step {i+1}"] = {
-            "content": solution.strip(),
-            "label": 1  # 默认标签为1
+    if data.get("solution") is None:
+        new_json = {
+            "question": data["question"],
+            "solution": {},
+            "dataset": data.get("dataset", "test"),
         }
 
-    # 处理每个解决方案部分的数学公式高亮
-    for step, info in new_json["solution"].items():
-        temp_content = info["content"]
-        info["content"] = highlight_equations(temp_content)
+        # 方案拆分
+        split_responses = split_response(data['response'])
+
+        # 处理每个解决方案部分
+        for i, solution in enumerate(split_responses):
+            new_json["solution"][f"Step {i+1}"] = {
+                "content": solution.strip(),
+            }
+
+        # 处理每个解决方案部分的数学公式高亮
+        for step, info in new_json["solution"].items():
+            temp_content = info["content"]
+            info["content"] = highlight_equations(temp_content)
+        
+    else: 
+        # 如果已经存在solution字段，则直接使用，不需要二次拆分行
+        new_json = data
+        # 判断是否已经进行过公式高亮
+        for step, info in new_json["solution"].items():
+            # 如果该步骤不存在<<和>>则需要尝试高亮
+            temp_content = info["content"]
+            if '<<' not in temp_content and '>>' not in temp_content:
+                info["content"] = highlight_equations(temp_content)
             
     # 返回新的JSON格式
     return json.dumps(new_json, ensure_ascii=False)
@@ -84,13 +94,13 @@ def create_jsonl_file(source_folder, data={}):
         with open(file_path, 'w', encoding='utf-8') as file:
             if not data:
                 # 提示用户输入每个 JSON 对象的数据
-                questions = input("请输入问题部分内容: ")
+                question = input("请输入问题部分内容: ")
                 solution = input("请输入解决方案部分内容: ")
                 dataset = input("请输入数据集名称: ")
                 
                 # 创建 JSON 数据结构
                 data = {
-                    "questions": questions,
+                    "question": question,
                     "solution": solution,
                     "dataset": dataset
                 }

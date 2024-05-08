@@ -427,7 +427,7 @@ def out_to_file(data):
         file.writelines(results)
 
 def api_both(question, response = None, answer = None):
-    data = data = {"questions": question}
+    data = data = {"question": question}
     
     # 如果提供了回答，就用回答作为回答, 否则生成回答
     if response:
@@ -436,7 +436,7 @@ def api_both(question, response = None, answer = None):
         data["response"] = standard_prompt_response(
             data, 
             backbone = "tgi",
-            prompt_key = "questions",
+            prompt_key = "question",
             response_key = "response"
         )
 
@@ -449,7 +449,7 @@ def api_both(question, response = None, answer = None):
     data_back = critic_math_problem(
         data, 
         backbone= "chatglm_platform",
-        prompt_key = "questions",
+        prompt_key = "question",
         reference_key = "answer",
         response_key = "response",
         PROMPT_TEMPLATE = PROMPT_TEMPLATE
@@ -458,7 +458,7 @@ def api_both(question, response = None, answer = None):
     # 前向过程路径预测
     data_path_pred = generate_process(
         data_back,
-        prompt_key = "questions",
+        prompt_key = "question",
         response_key = "response"
     )
     
@@ -466,7 +466,7 @@ def api_both(question, response = None, answer = None):
     data_path_pred_judge = evaluate_process(
         data_path_pred,
         backbone = "chatglm_platform",
-        prompt_key = "questions",
+        prompt_key = "question",
         process_response_key = "generated_paths",
         reference_answewr_key = "answer",
         PROMPT_TEMPLATE = PROMPT_TEMPLATE

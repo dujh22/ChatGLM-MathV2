@@ -5,10 +5,8 @@ import sys
 
 def process_json_line(line):
     data = json.loads(line)
-    new_data = {
-        "questions": data["question"],
-        "solution": data["response"],
-    }
+    # 目前不做任何调整，直接返回原始数据
+    new_data = data.copy()
     return json.dumps(new_data, ensure_ascii=False)
 
 def turn_response_and_solution(input_file_path, output_file_path):

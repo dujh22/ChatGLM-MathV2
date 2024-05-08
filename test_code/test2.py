@@ -29,7 +29,7 @@ def split_response(response): # 使用正则表达式按换行符分割响应文
 
 def process_json_line(data):
     # 加载原始JSON
-    new_json = {"solution": {}, "dataset": "math23k", "questions": "4"}
+    new_json = {"solution": {}, "dataset": "math23k", "question": "4"}
     # 方案拆分
     split_responses = split_response(data)
 

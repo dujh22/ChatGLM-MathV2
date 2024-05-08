@@ -19,12 +19,12 @@ def Check1_JsonlVisualization(input_file_path):
             # 解析JSON行
             data = json.loads(line)
             # 获取问题
-            question = data['questions']
+            question = data['question']
             # 遍历所有解决步骤
             for step_name, step_data in data['solution'].items():
                 # 准备写入CSV的行数据，开始时只有问题和步骤内容
                 row_data = {
-                    'questions': question,
+                    'question': question,
                     'step': step_name,
                     'content': step_data['content'],
                     'label': step_data['label']

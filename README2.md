@@ -86,7 +86,7 @@ python api.py
 
 ```
 def api(question, solution):
-    data = {"questions": question, "solution": solution}
+    data = {"question": question, "solution": solution}
     data1 = SplitByRow(data) # 数据分行与公式高亮
     data2 = IsCalculationOrReasoning(data1) # 判断计算步还是推理步
     data3 = JudgmentStepCalculatedCorrectly(data2) # 针对计算步的自动标注
@@ -109,7 +109,7 @@ def api(question, solution):
 
 ```json
 {
-    "questions":"问题", # 一个英文字符串
+    "question":"问题", # 一个英文字符串
     "solution":"求解步骤", # 一个英文字符串
 }
 ```
@@ -120,7 +120,7 @@ def api(question, solution):
 
 ```json
 {
-  "questions": "问题描述：提出的问题，需要解决的问题内容。",
+  "question": "问题描述：提出的问题，需要解决的问题内容。",
   "solution": {
     "Step 1": {
       "content": "步骤内容：对此步骤的描述。",
@@ -156,7 +156,7 @@ def api(question, solution):
 
 当api.py中函数api里out_data = postprocess(data4)被关闭时，输出的json对象会更复杂，包括：
 
-- **questions**: 描述了问题的具体内容。
+- **question**: 描述了问题的具体内容。
 - **solution**: 包含了解决问题的各个步骤，每个步骤都是一个对象，包含以下字段：
   - **content**: 描述了该步骤的具体操作内容。
   - **label**: 人工或者参考标记步骤是否正确（1表示正确）。

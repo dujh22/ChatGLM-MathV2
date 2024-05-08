@@ -130,7 +130,7 @@ def split_response(response): # 使用正则表达式按换行符分割响应文
 def SplitByRow(data):
     # 初始化新的JSON格式
     new_json = {
-        "questions": data["questions"],
+        "question": data["question"],
         "solution": {},
     }
 
@@ -521,7 +521,7 @@ def check_calculation(info, question, history):
             info['StepCalculatedCorrectlyResult'].append(f"{actual_result}")
 
 def JudgmentStepCalculatedCorrectly(data):
-    question = data['questions']
+    question = data['question']
     history = ""
     history_json = {}
     if 'solution' in data:
@@ -562,7 +562,7 @@ def JudgmentStepReasoningCorrectly(data):
     if 'solution' in data:
         # 获取历史信息
         history = ""
-        question = data['questions']
+        question = data['question']
         for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
             history_json = info['history_json']
             if info['is_calculation_or_reasoning'] == 1: # 如果是计算步
@@ -588,7 +588,7 @@ def out_to_file(data):
 def postprocess(data):
     # 只保留需要的部分
     need_result = {}
-    need_result["questions"] = data["questions"]
+    need_result["question"] = data["question"]
     need_result['solution'] = {}
     temp_history = {}
     for step, info in data["solution"].items():
@@ -607,7 +607,7 @@ def postprocess(data):
     return need_result
 
 def api(question, solution):
-    data = {"questions": question, "solution": solution}
+    data = {"question": question, "solution": solution}
     data1 = SplitByRow(data) # 数据分行与公式高亮
     data2 = IsCalculationOrReasoning(data1) # 判断计算步还是推理步
     data3 = JudgmentStepCalculatedCorrectly(data2) # 针对计算步的自动标注

@@ -45,7 +45,7 @@ base_folder = base_folder.replace("\\", "//")
 
 @time_it
 def pipeline_api(question, response = None, answer = None):
-    '''data = data = {"questions": question}
+    '''data = data = {"question": question}
     
     # 如果提供了回答，就用回答作为回答, 否则生成回答
     if response:
@@ -54,7 +54,7 @@ def pipeline_api(question, response = None, answer = None):
         data["response"] = standard_prompt_response(
             data, 
             backbone = "tgi",
-            prompt_key = "questions",
+            prompt_key = "question",
             response_key = "response"
         )
 
@@ -68,7 +68,7 @@ def pipeline_api(question, response = None, answer = None):
     data_back = critic_math_problem(
         data, 
         backbone= "chatglm_platform",
-        prompt_key = "questions",
+        prompt_key = "question",
         reference_key = "answer",
         response_key = "response",
         PROMPT_TEMPLATE = PROMPT_TEMPLATE
@@ -77,7 +77,7 @@ def pipeline_api(question, response = None, answer = None):
     # 前向过程路径预测
     data_path_pred = generate_process(
         data_back,
-        prompt_key = "questions",
+        prompt_key = "question",
         response_key = "response"
     )
     
@@ -85,7 +85,7 @@ def pipeline_api(question, response = None, answer = None):
     data_path_pred_judge = evaluate_process(
         data_path_pred,
         backbone = "chatglm_platform",
-        prompt_key = "questions",
+        prompt_key = "question",
         process_response_key = "generated_paths",
         reference_answewr_key = "answer",
         PROMPT_TEMPLATE = PROMPT_TEMPLATE
@@ -97,13 +97,13 @@ def pipeline_api(question, response = None, answer = None):
 
     # 构造数据
     line = {
-        "questions": data_path_pred_judge_aggregate['questions'],
+        "question": data_path_pred_judge_aggregate['question'],
         "solution": data_path_pred_judge_aggregate['response'],
         "dataset": 'test'
     }'''
 
     temp_mid = {
-        "questions": question,
+        "question": question,
         "solution": "Janet spends 3 hours + 5 hours = 8 hours per week on music lessons. \nShe spends 40 * 3 = 120 on clarinet lessons per week. \nShe spends 28 * 5 = 140 on piano lessons per week. \nJanet spends 120 + 140 = 260 on music lessons per week. \nShe spends 260 * 52 = 13520 on music lessons in a year. The answer is: 13520 ",
     }
 

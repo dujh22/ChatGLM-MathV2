@@ -535,7 +535,7 @@ def highlight_equations(text):
 def SplitByRow(data):
     # 初始化新的JSON格式
     new_json = {
-        "questions": data["questions"],
+        "question": data["question"],
         "solution": {},
     }
 
@@ -926,7 +926,7 @@ def check_calculation(info, question, history):
             info['StepCalculatedCorrectlyResult'].append(f"{actual_result}")
 
 def JudgmentStepCalculatedCorrectly(data):
-    question = data['questions']
+    question = data['question']
     history = ""
     history_json = {}
     if 'solution' in data:
@@ -967,7 +967,7 @@ def JudgmentStepReasoningCorrectly(data):
     if 'solution' in data:
         # 获取历史信息
         history = ""
-        question = data['questions']
+        question = data['question']
         for step, info in data['solution'].items(): # step变量会接收步骤的名称（如"Step 1"），而info变量会接收与这个步骤名称对应的字典值。
             history_json = info['history_json']
             if info['is_calculation_or_reasoning'] == 1: # 如果是计算步
@@ -988,7 +988,7 @@ def JudgmentStepReasoningCorrectly(data):
 def postprocess(data):
     # 只保留需要的部分
     need_result = {}
-    need_result["questions"] = data["questions"]
+    need_result["question"] = data["question"]
 
     need_result["response"] = data["response"]
     need_result["answer"] = data["answer"]
@@ -1016,7 +1016,7 @@ def postprocess(data):
 
 
 def api_both(question, response = None, answer = None):
-    data = data = {"questions": question}
+    data = data = {"question": question}
     
     # 如果提供了回答，就用回答作为回答, 否则生成回答
     if response:
@@ -1025,7 +1025,7 @@ def api_both(question, response = None, answer = None):
         data["response"] = standard_prompt_response(
             data, 
             backbone = "tgi",
-            prompt_key = "questions",
+            prompt_key = "question",
             response_key = "response"
         )
 
@@ -1038,7 +1038,7 @@ def api_both(question, response = None, answer = None):
     data_back = critic_math_problem(
         data, 
         backbone= "chatglm_platform",
-        prompt_key = "questions",
+        prompt_key = "question",
         reference_key = "answer",
         response_key = "response",
         PROMPT_TEMPLATE = PROMPT_TEMPLATE
@@ -1047,7 +1047,7 @@ def api_both(question, response = None, answer = None):
     # 前向过程路径预测
     data_path_pred = generate_process(
         data_back,
-        prompt_key = "questions",
+        prompt_key = "question",
         response_key = "response"
     )
     
@@ -1055,7 +1055,7 @@ def api_both(question, response = None, answer = None):
     data_path_pred_judge = evaluate_process(
         data_path_pred,
         backbone = "chatglm_platform",
-        prompt_key = "questions",
+        prompt_key = "question",
         process_response_key = "generated_paths",
         reference_answewr_key = "answer",
         PROMPT_TEMPLATE = PROMPT_TEMPLATE

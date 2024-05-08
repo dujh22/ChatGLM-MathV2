@@ -52,7 +52,7 @@ TOPP = 0.2  # 设置生成文本时的Top-p参数
 PROMPT_TEMPLATE = None  # 初始化提示模板变量
 
 
-def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
+def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048, url = CRITIC_URL):
     '''
         该功能用于与基于聊天的模型平台通信，向其发送当前和历史对话数据，然后接收生成的回复。它可以通过温度和top_p 等参数对生成过程进行详细定制，因此适用于需要根据用户输入和以前的对话上下文动态生成回复的交互式应用。
     '''
@@ -102,12 +102,12 @@ def query_chatglm_platform(prompt, history=[], do_sample=True, max_tokens=2048):
 
     return answer  # 返回生成的回答或None
 
-def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_retry=3):
+def query_chatglm_tgi(prompt, history=[], do_sample=True, max_tokens=2048, max_retry=3, url = TGI_URL):
     '''
         该函数根据对话历史和当前提示构建消息流，然后查询指定 URL 上的文本生成模型。它会调整生成参数，如采样、标记限制和温度，并在出现错误时重试请求。这种功能对于将历史对话上下文整合到响应生成中的系统来说非常典型，因此适用于需要保持连贯和上下文适当的交互的聊天应用或对话系统。
     '''
     # url = "http://xxx:8080/generate"  # 设置API的URL
-    url = TGI_URL 
+    # url = TGI_URL 
     messages = ""  # 初始化消息字符串
     for turn in history:
         ques, ans = turn["prompt"], turn["response"]  # 从历史中获取问题和回答
@@ -272,7 +272,8 @@ def standard_prompt_response(
     skip_generated=False, 
     backbone="gpt-3.5-turbo", 
     prompt_key="prompt", 
-    num_generation=1
+    num_generation=1,
+    url = TGI_URL
 ): 
     '''
        该函数是一个通用包装器，可根据指定的提示和后端模型生成响应，并可配置生成次数和重试次数。它支持在特定条件下跳过响应，并与包括 GPT 模型变体在内的各种后端模型集成。它的设计目的是处理提供交互历史记录的情况，并在批处理过程中随机打印出响应，用于调试或监控。 
@@ -280,6 +281,10 @@ def standard_prompt_response(
     # 如果设置了跳过响应且响应键存在于字典中，直接返回该响应
     if skip_response and response_key in x:
         print("skip")
+        return x[response_key]
+    
+    # 如果响应键存在于字典中，直接返回该响应
+    if response_key in x: 
         return x[response_key]
     
     # if skip_generated and response_key in x:
@@ -313,9 +318,9 @@ def standard_prompt_response(
         max_try = 3  # 最大尝试次数为3
         for _ in range(max_try):
             if backbone == "chatglm_platform":
-                result = query_chatglm_platform(prompt, history)  # 如果后端是chatglm_platform，调用相应的查询函数
+                result = query_chatglm_platform(prompt=prompt, history=history, url=url)  # 如果后端是chatglm_platform，调用相应的查询函数
             elif backbone == "tgi":
-                result = query_chatglm_tgi(prompt, history)  # 如果后端是tgi，调用相应的查询函数
+                result = query_chatglm_tgi(prompt=prompt, history=history, url=url)  # 如果后端是tgi，调用相应的查询函数
             elif backbone == "chatglm_ipo":
                 # result = query_chatglm(prompt, history)
                 raise NotImplementedError  # 如果后端是chatglm_ipo，抛出未实现异常
@@ -347,7 +352,7 @@ def standard_prompt_response(
     return result
     
 @time_it
-def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", response_key="response", reference_key="answer", max_retry=3, PROMPT_TEMPLATE=None):
+def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", response_key="response", reference_key="answer", max_retry=3, PROMPT_TEMPLATE=None, url = CRITIC_URL):
     '''
         该函数使用指定的模型（主干）评估数学应答。它用问题陈述、正确答案和助手的回答格式化输入，然后查询模型以评估回答的准确性。该函数会多次尝试以获得评级，并将结果添加到输出列表中，其中包括答案、评级和完整的判断结果。这种设置通常用于需要对回答进行自动评分或反馈的教育或测试环境中。
     '''
@@ -377,9 +382,9 @@ def critic_math_problem(x, backbone="chatglm_platform", prompt_key="prompt", res
 
             # 根据选择的后端模型调用相应的查询函数
             if backbone == "chatglm_platform":
-                result = query_chatglm_platform(input_data)
+                result = query_chatglm_platform(prompt=input_data, url=url)
             elif backbone == "tgi":
-                result = query_chatglm_tgi(input_data)
+                result = query_chatglm_tgi(prompt=input_data, url=url)
             elif backbone == "chatglm_ipo":
                 # result = query_chatglm(input_data)
                 raise NotImplementedError
@@ -422,6 +427,7 @@ def main():
         reference_key = "answer"
         backbone = "gpt-3.5-turbo"
         mode = "response"
+        url = None
     else:
         prompt_template_path = 'F://code//github//ChatGLM-MathV2//shepherd_prm//templates//criticllm_math_template.txt'
         prompt_key = "question"
@@ -433,14 +439,17 @@ def main():
         # backbone = "tgi" # generate用tgi，critic用chatglm_platform
         # input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100.jsonl"
         # mode = "response"
+        # url = TGI_URL
 
         # 如果是评估模式
         backbone = "chatglm_platform"
         input_file_path = "F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi.jsonl"
         mode = "critic"
+        url = CRITIC_URL
 
     # 创建ArgumentParser对象
     parser = argparse.ArgumentParser()  
+
     parser.add_argument("--input_file", type=str, default=input_file_path)  # 添加输入文件路径的命令行参数
     parser.add_argument("--mode", type=str, default=mode)  # 添加模式选择的命令行参数
     parser.add_argument("--backbone", type=str, default=backbone)  # 添加使用的模型版本的命令行参数
@@ -452,6 +461,8 @@ def main():
     parser.add_argument("--response_key", type=str, default=response_key)  # 添加响应关键字的命令行参数
     parser.add_argument("--num_generation", type=str, default=1)  # 添加生成数量的命令行参数
     parser.add_argument("--num_process", type=int, default=10)  # 添加处理数量的命令行参数
+    parser.add_argument("--url", type=str, default=None)  # 添加API服务器的URL的命令行参数
+
     args = parser.parse_args()  # 解析命令行参数
     
     if args.mode == "critic":  # 如果模式为评估
@@ -466,7 +477,8 @@ def main():
                 prompt_key=args.prompt_key, 
                 reference_key=args.reference_key,
                 response_key=args.response_key,
-                PROMPT_TEMPLATE = PROMPT_TEMPLATE
+                PROMPT_TEMPLATE = PROMPT_TEMPLATE,
+                url=args.url
             ),
             is_glm=False, 
             num_process=args.num_process  # 设置是否使用GLM模型和处理数量
@@ -483,7 +495,8 @@ def main():
                 skip_generated=args.skip_generated, 
                 backbone=args.backbone, 
                 prompt_key=args.prompt_key, 
-                response_key=args.response_key
+                response_key=args.response_key,
+                url = args.url,
             ),
             is_glm=False,
             num_process=args.num_process  # 设置是否使用GLM模型和处理数量
