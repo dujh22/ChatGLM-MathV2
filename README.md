@@ -25,17 +25,9 @@
    ```
 
 3. 请将数据集下载放到raw_data文件夹下，下载数据可使用utils/data_download.py+data_urls.txt(注意多次执行直到命令行全部输出√)；也可以直接copy到该目录下
-4. 请配置自己的config.py文件，并放到llm文件夹下，具体格式为（也可不配置，视具体情况而定）
+4. 请配置自己的config.py文件，并放到llm文件夹下，具体格式为
 
 ```
-# GPT API密钥和基本URL
-GPT_API_KEY = "sk-***9"
-GPT_BASE_URL = "https://**"
-
-# GLM API密钥和基本URL
-GLM_API_KEY = "***"
-GLM_BASE_URL = "https://***"
-
 # 用于答案补全的配置参数
 TGI_URL = "http://***"
 

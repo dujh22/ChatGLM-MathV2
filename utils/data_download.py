@@ -3,6 +3,10 @@
 # 数据集链接存储在 data_urls.txt 文件中，一行一个链接
 # 下载后的数据集保存在对应的文件夹中，文件夹名根据链接自动生成
 
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from pycrawlers import huggingface
 # 实例化类
 # token
