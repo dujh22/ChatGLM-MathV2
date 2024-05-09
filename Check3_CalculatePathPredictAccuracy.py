@@ -32,7 +32,8 @@ def calculate_accuracy(data, output_file):
         standard_label = []
         if item.get("solution") is not None:
             for step, info in item["solution"].items():
-                standard_label.append(info['label'])
+                if info.get('label') is not None:
+                    standard_label.append(info['label'])
 
         # 获得整体结果
         critic_result = int(item['critic_result'][0]['rating'])

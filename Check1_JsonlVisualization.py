@@ -27,7 +27,7 @@ def Check1_JsonlVisualization(input_file_path):
                     'question': question,
                     'step': step_name,
                     'content': step_data['content'],
-                    'label': step_data['label']
+                    'label': step_data.get('label', '')
                 }
                 # 添加其他键值对
                 for key, value in step_data.items():

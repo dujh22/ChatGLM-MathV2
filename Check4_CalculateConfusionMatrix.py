@@ -35,20 +35,23 @@ def calculate_accuracy(data, output_file):
         total_label = True # 记录当前数据样例是否为步骤全对样例
         step_label = True
         for step_key, step_info in entry['solution'].items():
-            standard_label.append(step_info['label'])
-            if step_info['label'] == 1:
-                step_num['T'] += 1
-                if any(temp for temp in step_info['JudgmentStepCalculatedCorrectly']) == 0 or any(temp for temp in step_info['JudgmentStepEquationCorrectly']) == 0 or step_info['JudgmentStepReasoningCorrectly'] == 0:
-                    front_step_ConfusionMatrix['FN'] += 1
+            if step_info.get('label') is not None:
+                standard_label.append(step_info['label'])
+
+                if step_info['label'] == 1:
+                    step_num['T'] += 1
+                    if any(temp for temp in step_info['JudgmentStepCalculatedCorrectly']) == 0 or any(temp for temp in step_info['JudgmentStepEquationCorrectly']) == 0 or step_info['JudgmentStepReasoningCorrectly'] == 0:
+                        front_step_ConfusionMatrix['FN'] += 1
+                    else:
+                        front_step_ConfusionMatrix['TP'] += 1
                 else:
-                    front_step_ConfusionMatrix['TP'] += 1
-            else:
-                step_num['F'] += 1
-                total_label = False
-                if any(temp for temp in step_info['JudgmentStepCalculatedCorrectly']) == 0 or any(temp for temp in step_info['JudgmentStepEquationCorrectly']) == 0 or step_info['JudgmentStepReasoningCorrectly'] == 0:
-                    front_step_ConfusionMatrix['TN'] += 1
-                else:
-                    front_step_ConfusionMatrix['FP'] += 1
+                    step_num['F'] += 1
+                    total_label = False
+                    if any(temp for temp in step_info['JudgmentStepCalculatedCorrectly']) == 0 or any(temp for temp in step_info['JudgmentStepEquationCorrectly']) == 0 or step_info['JudgmentStepReasoningCorrectly'] == 0:
+                        front_step_ConfusionMatrix['TN'] += 1
+                    else:
+                        front_step_ConfusionMatrix['FP'] += 1
+                
         
         if total_label == True:
             case_num['T'] += 1
@@ -65,16 +68,17 @@ def calculate_accuracy(data, output_file):
 
         # 统计后向
         for it, step_info in enumerate(entry['generated_paths']):
-            if standard_label[it] == 1:
-                if step_info['hard_label'] == 0:
-                    back_step_ConfusionMatrix['FN'] += 1
+            if len(standard_label) > 0:
+                if standard_label[it] == 1:
+                    if step_info['hard_label'] == 0:
+                        back_step_ConfusionMatrix['FN'] += 1
+                    else:
+                        back_step_ConfusionMatrix['TP'] += 1
                 else:
-                    back_step_ConfusionMatrix['TP'] += 1
-            else:
-                if step_info['hard_label'] == 0:
-                    back_step_ConfusionMatrix['TN'] += 1
-                else:
-                    back_step_ConfusionMatrix['FP'] += 1
+                    if step_info['hard_label'] == 0:
+                        back_step_ConfusionMatrix['TN'] += 1
+                    else:
+                        back_step_ConfusionMatrix['FP'] += 1
         
         if total_label == True:
             if int(entry['critic_result'][0]["rating"]) > 8:

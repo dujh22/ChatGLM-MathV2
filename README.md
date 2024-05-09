@@ -24,6 +24,25 @@
    pip install -r requirements.txt
    ```
 
+3. 请将数据集下载放到raw_data文件夹下，下载数据可使用utils/data_download.py+data_urls.txt(注意多次执行直到命令行全部输出√)；也可以直接copy到该目录下
+4. 请配置自己的config.py文件，并放到llm文件夹下，具体格式为（也可不配置，视具体情况而定）
+
+```
+# GPT API密钥和基本URL
+GPT_API_KEY = "sk-***9"
+GPT_BASE_URL = "https://**"
+
+# GLM API密钥和基本URL
+GLM_API_KEY = "***"
+GLM_BASE_URL = "https://***"
+
+# 用于答案补全的配置参数
+TGI_URL = "http://***"
+
+# 用于答案评分的配置参数
+CRITIC_URL = "http://***"
+```
+
 ## 2. 使用说明
 
 ### 2.1 最简单的使用方式：调用api串行执行
@@ -230,13 +249,13 @@ def pipeline_file():
 
 如果是针对多条数据，建议采用批处理方式，本项目对批处理进行了有效支持。
 
-为了方便用户一步调用完整pipeline，可以直接采用如下命令（只需要执行这个命令，其他操作无）
+为了方便用户一步调用完整pipeline，可以Linux直接采用如下命令（只需要执行这个命令，其他操作无）
 
 ```shell
 bash pipeline.bash
 ```
 
-或者(windows系统下)
+或者windows系统下
 
 ```
 .\pipeline.bat
@@ -246,7 +265,32 @@ bash pipeline.bash
 
 其中的参数可以进一步根据实际需要调整设置，相关进一步参数用途可参照下面的具体运行过程。
 
-【也可以注意到存在一个pipeline_zh.bat，里面进行了相关注释！！】
+【也可以注意到存在一个不可运行的样例pipeline_zh.bat，里面进行了相关注释！！】
+
+一般来说，只需要修改如下参数
+
+| 序号 | 变量名               | 说明                                                         | 示例                                                         |
+| ---- | -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 1    | project_path         | 设置项目路径变量                                             | F://code//github//ChatGLM-MathV2//                           |
+| 2    | num_parallel_process | 设置并行处理过程的数量，越大pipeline运行越快                 | 10                                                           |
+| 3    | dataset              | 设置数据集名称变量，这一步是必须的，因为如果给定的数据集名称不在pipeline可处理数据集中，需要再新增预处理函数，具体参见utils/data_preprocessing.py逻辑，请将新数据集格式归一化到类似math_shepherd经过data_preprocessing.py处理后的格式，否则会严重影响后续pipeline | math_shepherd                                                |
+|      | has_label            | 设置是否有标签的变量，标识这个数据集的每个问题的每个step有没有reference_correct_label，取值只有hasnot/hasset | hasnot                                                       |
+|      | has_response         | 设置是否有响应的变量，标识这个数据集的每个问题是否已经存在response，如果不存在会重新生成，取值只有has/hasnot | hasnot                                                       |
+|      | input_file_path      | 设置输入原始数据集文件路径                                   | %project_path%raw_data//peiyi9979_Math_Shepherd//math-shepherd.jsonl |
+|      | num_points           | 设置待处理的数据数量，比如处理前100条                        | 100                                                          |
+|      | 其他参数             | 不建议修改，如确有必要                                       | 比如backbone是选择的llm类型，现在支持的是tgi和chatglm_platform，其中tgi可用与generate，也可用于critic（注意url应该不同），chatglm_platform用于critic |
+
+每一次生成完成后，在data文件夹下可以找到对应的结果文件，其中：
+
+front_Check2Step4子文件夹下的jsonl是最终的标注文件
+
+front_Check2Step4子文件夹下的_ConfusionMatrix.csv是混淆矩阵结果
+
+front_Check2Step4子文件夹下的_statistic.csv是acc前向详细结果
+
+tgi_math_critic_path_math_critic2_statistics2.csv是acc后向详细结果（注意statistics2.csv和statistics.csv可能结果存在不同，应以2为准）
+
+在front_step*子文件夹中都同时有一个jsonl和csv文件，csv文件用于可视化debug
 
 #### 2.4.0 数据预处理
 
@@ -366,9 +410,7 @@ file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_
 output_file_path = 'F://code//github//ChatGLM-MathV2//data//test_data100//test_data100_tgi_math_critic_path_math_critic2_statistics.csv'
 ```
 
-还需注意的是，如果2.4.4输出文件中，不包括可以对比的答案信息，需要执行如下脚本将答案信息插入其中再计算Acc，否则Acc默认全部与label=1进行比较。
-
-
+还需注意的是，如果2.4.4输出文件中，不包括可以对比的答案信息，需要执行如下脚本将答案信息插入其中再计算Acc，否则Acc默认全部与label=None进行比较。
 
 #### 2.4.5 前向自动标注
 

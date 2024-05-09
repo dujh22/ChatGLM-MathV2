@@ -33,11 +33,8 @@ def process_json_line(line):
 
     # 初始化新的JSON格式
     if data.get("solution") is None:
-        new_json = {
-            "question": data["question"],
-            "solution": {},
-            "dataset": data.get("dataset", "test"),
-        }
+        new_json = data
+        new_json["solution"] = {}
 
         # 方案拆分
         split_responses = split_response(data['response'])

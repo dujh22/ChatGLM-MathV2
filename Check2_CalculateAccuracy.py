@@ -167,7 +167,7 @@ def analyze_data(json_data, processed_json_data, output_file_path, backbone = "c
                 has_calculation = True
                 Flag = False
                 # 检测计算步的标签是否正确
-                if step_info['label'] == 1:
+                if step_info.get('label', "") == 1:
                     if all(temp == 1 for temp in step_info['JudgmentStepCalculatedCorrectly']):
                         correct_judgments_by_step['LabelJudgmentStepCalculatedCorrectly'] += 1
                         Flag = True
@@ -231,7 +231,7 @@ def analyze_data(json_data, processed_json_data, output_file_path, backbone = "c
                 correct_judgments_by_step['reasoning_steps'] += 1
                 has_reasoning = True
 
-                if step_info['label'] == 1:
+                if step_info.get('label', "") == 1:
                     if step_info['JudgmentStepReasoningCorrectly'] == 1:
                         correct_judgments_by_step['LabelJudgmentStepReasoningCorrectly'] += 1
                         correct_judgments_by_step['correct_label_steps'] += 1
@@ -355,7 +355,7 @@ def analyze_data(json_data, processed_json_data, output_file_path, backbone = "c
                 has_calculation = True
                 Flag = False
                 # 检测计算步的标签是否正确
-                if step_info['label'] == 1:
+                if step_info.get('label', "") == 1:
                     if all(temp == 1 for temp in step_info['JudgmentStepCalculatedCorrectly']):
                         correct_judgments_by_step['LabelJudgmentStepCalculatedCorrectly'] += 1
                         Flag = True
@@ -421,7 +421,7 @@ def analyze_data(json_data, processed_json_data, output_file_path, backbone = "c
                 correct_judgments_by_step['reasoning_steps'] += 1
                 has_reasoning = True
 
-                if step_info['label'] == 1:
+                if step_info.get('label', "") == 1:
                     if step_info['JudgmentStepReasoningCorrectly'] == 1:
                         correct_judgments_by_step['LabelJudgmentStepReasoningCorrectly'] += 1
                         correct_judgments_by_step['correct_label_steps'] += 1
