@@ -2,7 +2,6 @@
 config.py
 
 # 忽略文件夹
-raw_data/
 data/
 dataV2.1/
 
